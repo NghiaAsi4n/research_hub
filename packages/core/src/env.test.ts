@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isLocalOllamaEndpoint, loadEnv, resolveOllamaBaseUrl } from './env';
+import { envIssues, isLocalOllamaEndpoint, loadEnv, resolveOllamaBaseUrl } from './env';
 
 // Cấu hình tối thiểu hợp lệ: sáu biến bắt buộc của Giai đoạn 0.
 const base = {
@@ -46,6 +46,22 @@ describe('loadEnv', () => {
     } as NodeJS.ProcessEnv);
     expect(env.OBJECT_STORAGE_BUCKET).toBe('research-hub-media');
     expect(env.AWS_REGION).toBe('aws-ap-southeast-1');
+  });
+});
+
+describe('envIssues', () => {
+  it('rỗng khi cấu hình hợp lệ', () => {
+    expect(envIssues(base as NodeJS.ProcessEnv)).toEqual([]);
+  });
+
+  it('nêu tên biến còn thiếu', () => {
+    expect(envIssues(withoutDatabaseUrl as NodeJS.ProcessEnv)).toEqual(['DATABASE_URL']);
+  });
+
+  it('nêu tên biến sai định dạng', () => {
+    expect(
+      envIssues({ ...base, NEON_AUTH_COOKIE_SECRET: 'qua-ngan' } as NodeJS.ProcessEnv),
+    ).toEqual(['NEON_AUTH_COOKIE_SECRET']);
   });
 });
 

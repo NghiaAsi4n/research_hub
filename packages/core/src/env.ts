@@ -60,6 +60,16 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   return parsed.data;
 }
 
+// Chỉ trả TÊN biến sai hoặc thiếu (không trả giá trị) để `/api/health` nói được trên Vercel
+// đang hụt khoá nào mà không làm lộ khoá.
+export function envIssues(source: NodeJS.ProcessEnv = process.env): string[] {
+  const parsed = envSchema.safeParse(source);
+  if (parsed.success) {
+    return [];
+  }
+  return [...new Set(parsed.error.issues.map((issue) => issue.path.join('.')))];
+}
+
 let cached: Env | null = null;
 
 // Đọc muộn thay vì validate ở cấp module: nếu validate ngay lúc import thì `next build`
