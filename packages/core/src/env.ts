@@ -16,28 +16,36 @@ const requiredShape = {
   CRON_SECRET: z.string().min(16, 'CRON_SECRET cần ít nhất 16 ký tự'),
 };
 
+// Vercel lưu được biến với giá trị rỗng, và `.env.local` cũng hay có dòng trống. Với nhóm
+// tuỳ chọn thì chuỗi rỗng nghĩa là "chưa khai", nên quy về undefined thay vì báo sai định dạng.
+const optionalText = () =>
+  z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(1).optional(),
+  );
+
 // Bật ở Giai đoạn 6. Để trống vẫn khởi động được.
 const optionalShape = {
-  SLACK_WEBHOOK_URL: z.string().min(1).optional(),
-  RESEND_API_KEY: z.string().min(1).optional(),
-  SSI_API_KEY: z.string().min(1).optional(),
+  SLACK_WEBHOOK_URL: optionalText(),
+  RESEND_API_KEY: optionalText(),
+  SSI_API_KEY: optionalText(),
 };
 
 // Object Storage của Neon: `neon link` đẩy credential vào .env.local theo tên chuẩn AWS,
 // nên đọc đúng tên đó thay vì tự đặt tiền tố riêng. Tên bucket không nằm trong .env.local
 // mà khai ở neon.ts, nên vẫn cần một biến riêng. Cho phép trống để CI typecheck và build chạy được.
 const storageShape = {
-  AWS_ENDPOINT_URL_S3: z.string().min(1).optional(),
-  AWS_REGION: z.string().min(1).optional(),
-  AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
-  AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
-  OBJECT_STORAGE_BUCKET: z.string().min(1).optional(),
+  AWS_ENDPOINT_URL_S3: optionalText(),
+  AWS_REGION: optionalText(),
+  AWS_ACCESS_KEY_ID: optionalText(),
+  AWS_SECRET_ACCESS_KEY: optionalText(),
+  OBJECT_STORAGE_BUCKET: optionalText(),
 };
 
 // Endpoint Ollama. Để trống thì mặc định dùng Ollama chạy ở máy; đặt https://ollama.com khi
 // muốn gọi cloud, và chỉ khi đó mới cần OLLAMA_API_KEY.
 const ollamaShape = {
-  OLLAMA_BASE_URL: z.string().min(1).optional(),
+  OLLAMA_BASE_URL: optionalText(),
 };
 
 const envSchema = z.object({

@@ -63,6 +63,23 @@ describe('envIssues', () => {
       envIssues({ ...base, NEON_AUTH_COOKIE_SECRET: 'qua-ngan' } as NodeJS.ProcessEnv),
     ).toEqual(['NEON_AUTH_COOKIE_SECRET']);
   });
+
+  it('coi chuỗi rỗng ở nhóm tuỳ chọn là chưa khai', () => {
+    expect(
+      envIssues({
+        ...base,
+        AWS_REGION: '',
+        AWS_ACCESS_KEY_ID: '   ',
+        RESEND_API_KEY: '',
+      } as NodeJS.ProcessEnv),
+    ).toEqual([]);
+  });
+
+  it('loadEnv bỏ qua biến tuỳ chọn để trống', () => {
+    const env = loadEnv({ ...base, AWS_REGION: '', OLLAMA_BASE_URL: '' } as NodeJS.ProcessEnv);
+    expect(env.AWS_REGION).toBeUndefined();
+    expect(env.OLLAMA_BASE_URL).toBeUndefined();
+  });
 });
 
 describe('resolveOllamaBaseUrl', () => {
