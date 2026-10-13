@@ -1,0 +1,21 @@
+{
+  "name": "@research-hub/pipeline",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "local": "node src/local.ts"
+  },
+  "dependencies": {
+    "@research-hub/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "vitest": "^5.0.3"
+  }
+}
