@@ -2,13 +2,15 @@
 
 Kho nghiên cứu cá nhân chạy trên các gói miễn phí. Kế hoạch đầy đủ nằm ở [research-hub-plan.md](./research-hub-plan.md).
 
-Trạng thái hiện tại: **đang ở Giai đoạn 0** — khung mã nguồn đã xong, Neon và Object Storage đã nối, đã deploy bản production lên Vercel.
+Trạng thái hiện tại: **Giai đoạn 0 đã xong phần mã nguồn và deploy** — bản production chạy được và CI xanh; còn lại ba việc kiểm chứng ở mục cuối tài liệu này.
+
+- Nhánh: mỗi giai đoạn một nhánh `phase-<số>`, `main` giữ bản đang chạy production. Giai đoạn 0 nằm ở nhánh `phase-0`.
 
 ## Bản chạy
 
 - Production, alias theo nhánh `main`: <https://researchhub-git-main-tran-trong-nghias-projects.vercel.app>
 - URL dạng `research-<hash>-…vercel.app` chỉ gắn với một bản build duy nhất, không dùng để chia sẻ hay khai vào cấu hình.
-- Project đang bật Deployment Protection: phải tắt "Vercel Authentication" cho môi trường Production ở Settings → Deployment Protection thì người ngoài mới mở được.
+- Đã tắt "Vercel Authentication" cho môi trường Production, nên URL trên mở được từ ngoài: request không kèm phiên đăng nhập Vercel vẫn nhận trang chủ.
 
 ## Cấu trúc
 
@@ -36,7 +38,8 @@ Playwright chỉ chạy trên trang công khai (`/`, `/sign-in`) vì mọi trang
 `pnpm exec playwright install chromium`.
 
 `env.ts` bắt buộc sáu biến và sẽ dừng ngay nếu thiếu. Ba biến `SLACK_WEBHOOK_URL`,
-`RESEND_API_KEY`, `SSI_API_KEY` chỉ cần từ Giai đoạn 6 nên để trống vẫn chạy được.
+`RESEND_API_KEY`, `SSI_API_KEY` chỉ cần từ Giai đoạn 6 nên để trống vẫn chạy được. Nhóm tuỳ chọn
+(ba biến đó cùng `AWS_*`, `OLLAMA_BASE_URL`, `EMBED_DIM`) để trống hoặc ghi chuỗi rỗng đều coi như chưa khai.
 
 ## Cơ sở dữ liệu
 
@@ -53,9 +56,9 @@ Project Neon phải tạo ở region **Singapore** (`aws-ap-southeast-1`) ngay t
 | Route | Bảo vệ | Trạng thái |
 |---|---|---|
 | `GET /api/health` | công khai | xác nhận cấu hình đã nạp |
-| `POST /api/embed` | session + rate limit | kiểm tra vector đúng 1024 chiều |
+| `POST /api/embed` | session + rate limit | kiểm tra vector đúng `EMBED_DIM` (mặc định 1024 chiều) |
 | `GET /api/cron/{job}` | `CRON_SECRET` | khung, chưa nối việc |
-| `POST /api/ingest` | session + rate limit | khung, chưa nối việc |
+| `POST /api/ingest` | session + rate limit | phát URL ký sẵn (`presignUpload`) để upload thẳng lên Object Storage |
 | `/api/auth/*` | Managed Better Auth | chặn luồng đăng ký |
 
 ## Cron
@@ -70,10 +73,12 @@ Khai báo ở `apps/web/vercel.json` (Root Directory của project Vercel là `a
 
 ## Việc còn lại của Giai đoạn 0
 
-1. Tắt Deployment Protection cho Production để bản deploy mở được từ bên ngoài.
-2. Xoá project Vercel trùng, chỉ giữ project gắn với repo `NghiaAsi4n/research_hub`.
-3. Kiểm kết quả lần chạy CI đầu tiên ở tab Actions.
+1. Upload thử một file thật qua URL ký sẵn rồi đọc lại từ bucket — nghiệm thu của mục 8 trong plan.
+2. Gọi `/api/embed` một lần bằng phiên đăng nhập để xác nhận vector 1024 chiều trên production.
+3. Kiểm ở Dashboard Vercel chỉ còn một project gắn với repo `NghiaAsi4n/research_hub`.
 
 Đã xong: project Neon ở Singapore với pgvector và Managed Better Auth, Object Storage, `pnpm-lock.yaml`,
-deploy Vercel, biến môi trường trên Dashboard kèm `CLOUDFLARE_ACCOUNT_ID`, region function `sin1`,
-sáu trang khung (`/`, `/sign-in` và năm mục chính) cùng bộ khung Playwright.
+deploy Vercel với alias theo nhánh `main`, biến môi trường trên Dashboard kèm `CLOUDFLARE_ACCOUNT_ID`,
+region function `sin1`, sáu trang khung (`/`, `/sign-in` và năm mục chính) cùng bộ khung Playwright,
+CI xanh, Vercel Authentication cho Production đã tắt, route `/api/ingest` phát URL ký sẵn, và `EMBED_DIM`
+đã thành cấu hình dùng chung trong `packages/core/src/env.ts`.

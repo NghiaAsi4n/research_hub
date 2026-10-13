@@ -48,11 +48,21 @@ const ollamaShape = {
   OLLAMA_BASE_URL: optionalText(),
 };
 
+// Số chiều vector nhúng, phải khớp cột `chunks.embedding` là vector(1024). Khai một chỗ ở đây
+// để route nhúng và schema không lệch nhau khi đổi model.
+const embedShape = {
+  EMBED_DIM: z.preprocess(
+    (value) => resolveEmbedDim(typeof value === 'string' ? value : undefined),
+    z.number().int().positive(),
+  ),
+};
+
 const envSchema = z.object({
   ...requiredShape,
   ...optionalShape,
   ...ollamaShape,
   ...storageShape,
+  ...embedShape,
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -95,6 +105,20 @@ export function resetEnvCache(): void {
 
 // Ollama chạy ở máy, không cần khoá. Đây là giá trị dùng khi OLLAMA_BASE_URL bỏ trống.
 export const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434';
+
+// Số chiều vector nhúng mặc định: bge-m3 trả 1024 chiều, khớp cột chunks.embedding vector(1024).
+export const DEFAULT_EMBED_DIM = 1024;
+
+// Cấu hình dùng chung cho số chiều vector nhúng: đọc EMBED_DIM khi đổi model, bỏ trống hoặc
+// ghi sai thì quay về mặc định. Route /api/embed và schema dùng chung hàm này.
+export function resolveEmbedDim(value?: string | null): number {
+  const raw = (value ?? '').trim();
+  if (raw === '') {
+    return DEFAULT_EMBED_DIM;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_EMBED_DIM;
+}
 
 // Chuẩn hoá endpoint: bỏ khoảng trắng và dấu gạch chéo cuối để ghép đường dẫn không bị "//api/embed".
 export function resolveOllamaBaseUrl(value?: string | null): string {

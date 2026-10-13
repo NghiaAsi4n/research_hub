@@ -1,9 +1,10 @@
-import { isLocalOllamaEndpoint, resolveOllamaBaseUrl } from '@research-hub/core/env';
+import {
+  isLocalOllamaEndpoint,
+  resolveEmbedDim,
+  resolveOllamaBaseUrl,
+} from '@research-hub/core/env';
 import { requireUser, tooManyRequestsResponse, unauthorizedResponse } from '@/lib/auth/server';
 import { checkRateLimit } from '@/lib/rate-limit';
-
-// Giai đoạn 0 bước 7: xác nhận vector đúng 1024 chiều, khớp cột chunks.embedding.
-const EXPECTED_EMBED_DIM = 1024;
 
 // Model nhúng chạy ở máy, đã pull ở Giai đoạn 0. Giá trị này phải được ghi vào
 // chunks.embed_model khi lưu, vì đổi model là phải sinh lại toàn bộ vector.
@@ -21,8 +22,9 @@ export async function POST(request: Request) {
     return tooManyRequestsResponse(limit.retryAfterSeconds);
   }
 
-  // Route này đọc thẳng process.env thay vì getEnv() để nhúng cục bộ vẫn chạy được khi
-  // chưa có khoá cloud (CLOUDFLARE_API_TOKEN, OLLAMA_API_KEY).
+  // Số chiều kỳ vọng lấy từ cấu hình dùng chung, nhưng đọc thẳng process.env thay vì getEnv()
+  // để nhúng cục bộ vẫn chạy được khi chưa có khoá cloud (CLOUDFLARE_API_TOKEN, OLLAMA_API_KEY).
+  const expectedDim = resolveEmbedDim(process.env.EMBED_DIM);
   const endpoint = resolveOllamaBaseUrl(process.env.OLLAMA_BASE_URL);
   const local = isLocalOllamaEndpoint(endpoint);
   const apiKey = process.env.OLLAMA_API_KEY?.trim();
@@ -65,8 +67,8 @@ export async function POST(request: Request) {
     endpoint,
     local,
     model: EMBED_MODEL,
-    expectedDim: EXPECTED_EMBED_DIM,
+    expectedDim,
     actualDim,
-    matches: actualDim === EXPECTED_EMBED_DIM,
+    matches: actualDim === expectedDim,
   });
 }

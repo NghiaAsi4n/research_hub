@@ -1,12 +1,14 @@
 export { isSignUpRequest, SIGN_UP_PATH_PATTERNS } from './auth';
 export { type Db, getDb, schema } from './db/client';
 export {
+  DEFAULT_EMBED_DIM,
   DEFAULT_OLLAMA_BASE_URL,
   type Env,
   getEnv,
   isLocalOllamaEndpoint,
   loadEnv,
   resetEnvCache,
+  resolveEmbedDim,
   resolveOllamaBaseUrl,
 } from './env';
 export {

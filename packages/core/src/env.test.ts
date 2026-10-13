@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { envIssues, isLocalOllamaEndpoint, loadEnv, resolveOllamaBaseUrl } from './env';
+import {
+  envIssues,
+  isLocalOllamaEndpoint,
+  loadEnv,
+  resolveEmbedDim,
+  resolveOllamaBaseUrl,
+} from './env';
 
 // Cấu hình tối thiểu hợp lệ: sáu biến bắt buộc của Giai đoạn 0.
 const base = {
@@ -79,6 +85,27 @@ describe('envIssues', () => {
     const env = loadEnv({ ...base, AWS_REGION: '', OLLAMA_BASE_URL: '' } as NodeJS.ProcessEnv);
     expect(env.AWS_REGION).toBeUndefined();
     expect(env.OLLAMA_BASE_URL).toBeUndefined();
+  });
+});
+
+describe('resolveEmbedDim', () => {
+  it('mặc định 1024 khi bỏ trống', () => {
+    expect(resolveEmbedDim(undefined)).toBe(1024);
+    expect(resolveEmbedDim('  ')).toBe(1024);
+  });
+
+  it('nhận giá trị ghi đè hợp lệ', () => {
+    expect(resolveEmbedDim('1536')).toBe(1536);
+  });
+
+  it('quay về mặc định khi giá trị sai', () => {
+    expect(resolveEmbedDim('abc')).toBe(1024);
+    expect(resolveEmbedDim('0')).toBe(1024);
+  });
+
+  it('loadEnv chuẩn hoá EMBED_DIM thành số', () => {
+    expect(loadEnv({ ...base, EMBED_DIM: '' } as NodeJS.ProcessEnv).EMBED_DIM).toBe(1024);
+    expect(loadEnv({ ...base, EMBED_DIM: '1024' } as NodeJS.ProcessEnv).EMBED_DIM).toBe(1024);
   });
 });
 
