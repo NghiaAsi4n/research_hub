@@ -2,7 +2,7 @@
 
 Kho nghiên cứu cá nhân chạy trên các gói miễn phí. Kế hoạch đầy đủ nằm ở [research-hub-plan.md](./research-hub-plan.md).
 
-Trạng thái hiện tại: **Giai đoạn 0 đã xong phần mã nguồn và deploy** — bản production chạy được và CI xanh; còn lại ba việc kiểm chứng ở mục cuối tài liệu này.
+Trạng thái hiện tại: **Giai đoạn 0 đã xong** — bản production chạy được, CI xanh, và Giai đoạn 1 đang được chia thành chín việc trong Jira.
 
 - Nhánh: mỗi giai đoạn một nhánh `phase-<số>`, `main` giữ bản đang chạy production. Giai đoạn 0 nằm ở nhánh `phase-0`.
 
@@ -71,11 +71,11 @@ Khai báo ở `apps/web/vercel.json` (Root Directory của project Vercel là `a
 | `/api/cron/briefing` | 09:00 | bản tin hằng ngày (Giai đoạn 6) |
 | `/api/cron/backup` | 18:00 | export sao lưu |
 
-## Việc còn lại của Giai đoạn 0
+## Tài liệu theo giai đoạn
 
-1. Upload thử một file thật qua URL ký sẵn rồi đọc lại từ bucket — nghiệm thu của mục 8 trong plan.
-2. Gọi `/api/embed` một lần bằng phiên đăng nhập để xác nhận vector 1024 chiều trên production.
-3. Kiểm ở Dashboard Vercel chỉ còn một project gắn với repo `NghiaAsi4n/research_hub`.
+- `docs/phase-0/README.md` — Giai đoạn 0, đã xong.
+- `docs/phase-1/README.md` — Giai đoạn 1, chia thành chín việc kèm thứ tự làm.
+- Checklist chi tiết từng việc nằm cùng thư mục nhưng chỉ để ở máy; ticket theo dõi nằm ở project Jira `RH`.
 
 Đã xong: project Neon ở Singapore với pgvector và Managed Better Auth, Object Storage, `pnpm-lock.yaml`,
 deploy Vercel với alias theo nhánh `main`, biến môi trường trên Dashboard kèm `CLOUDFLARE_ACCOUNT_ID`,

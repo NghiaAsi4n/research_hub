@@ -16,3 +16,9 @@ dist/
 playwright-report/
 test-results/
 .neon
+
+# Tài liệu theo giai đoạn: chỉ đẩy README của mỗi phase lên repo, checklist chi tiết để ở máy.
+docs/*
+!docs/*/
+docs/*/*
+!docs/*/README.md
