@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { getDb } from './db/client';
 import { documents, jobs, sources } from './db/schema';
-import { sha256Hex, deterministicUuid } from './ingest';
+import { deterministicUuid, sha256Hex } from './ingest';
 import { createIngestStore } from './ingest-store';
 
 // Test tích hợp cho đường ghi DB của T3 — thứ mà test bằng store giả không chứng minh được: mệnh đề
@@ -110,7 +110,10 @@ describeDb('createIngestStore trên Postgres thật', () => {
     expect(secondJob.id).toBe(firstJob.id);
 
     const storedSources = await db.select().from(sources).where(eq(sources.url, marker));
-    const storedDocuments = await db.select().from(documents).where(eq(documents.hash, contentHash));
+    const storedDocuments = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.hash, contentHash));
     const storedJobs = await db.select().from(jobs).where(eq(jobs.idemKey, idemKey));
     expect(storedSources).toHaveLength(1);
     expect(storedDocuments).toHaveLength(1);
@@ -121,7 +124,10 @@ describeDb('createIngestStore trên Postgres thật', () => {
     await expect(store.markUploadComplete({ jobId: firstJob.id })).resolves.toBeNull();
 
     const [readyJob] = await db.select().from(jobs).where(eq(jobs.idemKey, idemKey));
-    const [readyDocument] = await db.select().from(documents).where(eq(documents.hash, contentHash));
+    const [readyDocument] = await db
+      .select()
+      .from(documents)
+      .where(eq(documents.hash, contentHash));
     expect(readyJob?.state).toBe('queued');
     expect(readyDocument?.bytes).toBe(4242);
   });

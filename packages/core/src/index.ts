@@ -1,6 +1,13 @@
 export { isSignUpRequest, SIGN_UP_PATH_PATTERNS } from './auth';
 export { type Db, getDb, schema } from './db/client';
 export {
+  createDocumentStore,
+  type DocumentStatus,
+  type DocumentStore,
+  type MarkReadyInput,
+  type MarkStoppedInput,
+} from './document-store';
+export {
   DEFAULT_EMBED_DIM,
   DEFAULT_OLLAMA_BASE_URL,
   type Env,
@@ -49,7 +56,9 @@ export {
 } from './ingest-store';
 export {
   buildStorageKey,
+  markdownKeyFor,
   presignDownload,
   presignUpload,
+  putObject,
   UPLOAD_URL_TTL_SECONDS,
 } from './storage';

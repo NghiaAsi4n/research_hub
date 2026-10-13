@@ -12,7 +12,12 @@
     "local": "node src/local.ts"
   },
   "dependencies": {
-    "@research-hub/core": "workspace:*"
+    "@mozilla/readability": "^0.6.0",
+    "@research-hub/core": "workspace:*",
+    "@types/turndown": "^5.0.6",
+    "linkedom": "^0.18.13",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

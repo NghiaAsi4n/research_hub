@@ -61,6 +61,13 @@ export function presignDownload(key: string, expiresIn = UPLOAD_URL_TTL_SECONDS)
   });
 }
 
+// Ghi thẳng một object từ function hoặc pipeline: dùng cho bản Markdown sạch của T4/T5.
+export function putObject(key: string, body: string | Uint8Array, contentType: string) {
+  return client().send(
+    new PutObjectCommand({ Bucket: bucketName(), Key: key, Body: body, ContentType: contentType }),
+  );
+}
+
 // Quy ước khoá: <kind>/<yyyy>/<mm>/<uuid>.<ext> cho file gốc,
 // và <cùng khoá>.md cho bản Markdown sạch.
 export function buildStorageKey(kind: string, filename: string, now = new Date()): string {
@@ -68,4 +75,9 @@ export function buildStorageKey(kind: string, filename: string, now = new Date()
   const month = String(now.getUTCMonth() + 1).padStart(2, '0');
   const safeName = filename.replace(/[^\w.-]+/g, '_').slice(-80);
   return `${kind}/${year}/${month}/${crypto.randomUUID()}-${safeName}`;
+}
+
+// Khoá của bản Markdown sạch: cùng khoá với file gốc, thêm đuôi `.md` (T4, T5 ghi vào đây).
+export function markdownKeyFor(storageKey: string): string {
+  return `${storageKey}.md`;
 }
