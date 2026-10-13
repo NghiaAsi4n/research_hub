@@ -10,7 +10,9 @@
     "./db/client": "./src/db/client.ts",
     "./storage": "./src/storage.ts",
     "./auth": "./src/auth.ts",
-    "./guard": "./src/guard.ts"
+    "./guard": "./src/guard.ts",
+    "./ingest": "./src/ingest.ts",
+    "./ingest-store": "./src/ingest-store.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

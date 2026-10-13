@@ -25,6 +25,29 @@ export {
   type RefusalReason,
 } from './guard';
 export {
+  CONTENT_TYPE_PATTERN,
+  deterministicUuid,
+  documentHash,
+  fileSourceValue,
+  type IngestTarget,
+  ingestIdemKey,
+  MAX_FILENAME_LENGTH,
+  normalizeSourceUrl,
+  type ParsedIngest,
+  parseIngestRequest,
+  sha256Hex,
+  sourceId,
+  sourceObjectName,
+  titleHint,
+} from './ingest';
+export {
+  createIngestStore,
+  type DocumentUpsert,
+  type IngestStore,
+  type JobUpsert,
+  type SourceUpsert,
+} from './ingest-store';
+export {
   buildStorageKey,
   presignDownload,
   presignUpload,
