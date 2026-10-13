@@ -9,7 +9,8 @@
     "./db/schema": "./src/db/schema.ts",
     "./db/client": "./src/db/client.ts",
     "./storage": "./src/storage.ts",
-    "./auth": "./src/auth.ts"
+    "./auth": "./src/auth.ts",
+    "./guard": "./src/guard.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

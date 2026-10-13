@@ -3,23 +3,18 @@ import {
   resolveEmbedDim,
   resolveOllamaBaseUrl,
 } from '@research-hub/core/env';
-import { requireUser, tooManyRequestsResponse, unauthorizedResponse } from '@/lib/auth/server';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { guardRequest } from '@/lib/guard';
 
 // Model nhúng chạy ở máy, đã pull ở Giai đoạn 0. Giá trị này phải được ghi vào
 // chunks.embed_model khi lưu, vì đổi model là phải sinh lại toàn bộ vector.
 const EMBED_MODEL = 'bge-m3';
 
 export async function POST(request: Request) {
-  try {
-    await requireUser();
-  } catch {
-    return unauthorizedResponse();
-  }
-
-  const limit = checkRateLimit('embed', 20, 60_000);
-  if (!limit.allowed) {
-    return tooManyRequestsResponse(limit.retryAfterSeconds);
+  // Guard dùng chung: phiên hợp lệ, model trong allowlist, rate limit theo người dùng
+  // (plan mục 3, ranh giới 5 — quyết định nằm ở packages/core/src/guard.ts).
+  const guard = await guardRequest({ route: 'embed', model: EMBED_MODEL });
+  if (!guard.ok) {
+    return guard.response;
   }
 
   // Số chiều kỳ vọng lấy từ cấu hình dùng chung, nhưng đọc thẳng process.env thay vì getEnv()

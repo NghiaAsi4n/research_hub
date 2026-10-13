@@ -12,6 +12,19 @@ export {
   resolveOllamaBaseUrl,
 } from './env';
 export {
+  ALLOWED_EMBED_MODELS,
+  ALLOWED_SOURCE_KINDS,
+  GUARD_LIMITS,
+  type GuardOutcome,
+  type GuardRefusal,
+  type GuardRoute,
+  guardQuotaRoute,
+  isModelAllowed,
+  isSourceKindAllowed,
+  REFUSAL_STATUS,
+  type RefusalReason,
+} from './guard';
+export {
   buildStorageKey,
   presignDownload,
   presignUpload,

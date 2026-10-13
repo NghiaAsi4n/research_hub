@@ -1,12 +1,11 @@
 import { buildStorageKey, presignUpload, UPLOAD_URL_TTL_SECONDS } from '@research-hub/core/storage';
-import { requireUser, tooManyRequestsResponse, unauthorizedResponse } from '@/lib/auth/server';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { guardRequest } from '@/lib/guard';
 
 // Giai đoạn 0: cấp URL ký sẵn để thử upload thẳng từ trình duyệt lên Object Storage — file
 // không đi qua function vì Vercel Hobby giới hạn body 4.5 MB. Việc tạo `documents`/`jobs` rồi
 // xử lý nội dung thuộc Giai đoạn 1, plan mục 8.
 const MAX_FILENAME_LENGTH = 200;
-const ALLOWED_KINDS = new Set(['documents', 'media']);
+const DEFAULT_KIND = 'documents';
 const CONTENT_TYPE_PATTERN = /^[\w.+-]+\/[\w.+-]+$/;
 
 type UploadRequest = {
@@ -16,22 +15,18 @@ type UploadRequest = {
 };
 
 export async function POST(request: Request) {
-  try {
-    await requireUser();
-  } catch {
-    return unauthorizedResponse();
-  }
-
-  const limit = checkRateLimit('ingest', 30, 60_000);
-  if (!limit.allowed) {
-    return tooManyRequestsResponse(limit.retryAfterSeconds);
-  }
-
   const body = (await request.json().catch(() => ({}))) as UploadRequest;
+  const requestedKind = typeof body.kind === 'string' ? body.kind.trim() : '';
+  const kind = requestedKind === '' ? DEFAULT_KIND : requestedKind;
+
+  // Guard dùng chung: phiên hợp lệ, loại nguồn trong allowlist, rate limit theo người dùng.
+  const guard = await guardRequest({ route: 'ingest', sourceKind: kind });
+  if (!guard.ok) {
+    return guard.response;
+  }
+
   const filename = typeof body.filename === 'string' ? body.filename.trim() : '';
   const contentType = typeof body.contentType === 'string' ? body.contentType.trim() : '';
-  const kind =
-    typeof body.kind === 'string' && ALLOWED_KINDS.has(body.kind) ? body.kind : 'documents';
 
   if (filename === '' || filename.length > MAX_FILENAME_LENGTH) {
     return Response.json(
