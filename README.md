@@ -2,7 +2,13 @@
 
 Kho nghiên cứu cá nhân chạy trên các gói miễn phí. Kế hoạch đầy đủ nằm ở [research-hub-plan.md](./research-hub-plan.md).
 
-Trạng thái hiện tại: **đang ở Giai đoạn 0** — mới có khung mã nguồn, chưa nối Neon, chưa deploy.
+Trạng thái hiện tại: **đang ở Giai đoạn 0** — khung mã nguồn đã xong, Neon và Object Storage đã nối, đã deploy bản production lên Vercel.
+
+## Bản chạy
+
+- Production, alias theo nhánh `main`: <https://researchhub-git-main-tran-trong-nghias-projects.vercel.app>
+- URL dạng `research-<hash>-…vercel.app` chỉ gắn với một bản build duy nhất, không dùng để chia sẻ hay khai vào cấu hình.
+- Project đang bật Deployment Protection: phải tắt "Vercel Authentication" cho môi trường Production ở Settings → Deployment Protection thì người ngoài mới mở được.
 
 ## Cấu trúc
 
@@ -21,7 +27,13 @@ pnpm typecheck
 pnpm lint
 pnpm build
 pnpm dev                     # http://localhost:3000
+pnpm test                    # Vitest
+pnpm test:e2e                # Playwright, tự dựng dev server
 ```
+
+Playwright chỉ chạy trên trang công khai (`/`, `/sign-in`) vì mọi trang trong matcher của
+`proxy.ts` đều cần phiên đăng nhập thật. Cài trình duyệt một lần bằng
+`pnpm exec playwright install chromium`.
 
 `env.ts` bắt buộc sáu biến và sẽ dừng ngay nếu thiếu. Ba biến `SLACK_WEBHOOK_URL`,
 `RESEND_API_KEY`, `SSI_API_KEY` chỉ cần từ Giai đoạn 6 nên để trống vẫn chạy được.
@@ -48,7 +60,7 @@ Project Neon phải tạo ở region **Singapore** (`aws-ap-southeast-1`) ngay t
 
 ## Cron
 
-Khai báo ở `vercel.json`, chạy theo giờ UTC, tối đa một lần mỗi ngày trên gói Hobby:
+Khai báo ở `apps/web/vercel.json` (Root Directory của project Vercel là `apps/web`), chạy theo giờ UTC, tối đa một lần mỗi ngày trên gói Hobby:
 
 | Đường dẫn | Giờ UTC | Việc |
 |---|---|---|
@@ -56,10 +68,12 @@ Khai báo ở `vercel.json`, chạy theo giờ UTC, tối đa một lần mỗi 
 | `/api/cron/briefing` | 09:00 | bản tin hằng ngày (Giai đoạn 6) |
 | `/api/cron/backup` | 18:00 | export sao lưu |
 
-## Việc cần credential, chưa làm được ở phiên này
+## Việc còn lại của Giai đoạn 0
 
-1. Tạo project Neon ở Singapore, bật pgvector và Managed Better Auth.
-2. Bật Object Storage và lấy credential vào `.env.local`.
-3. Chạy `pnpm install` để sinh `pnpm-lock.yaml`, sau đó `pnpm typecheck`, `pnpm build`.
-4. `vercel link` và `vercel deploy` cho project Hobby.
-5. Đặt biến môi trường trên Vercel Dashboard và ghim region function là `sin1`.
+1. Tắt Deployment Protection cho Production để bản deploy mở được từ bên ngoài.
+2. Xoá project Vercel trùng, chỉ giữ project gắn với repo `NghiaAsi4n/research_hub`.
+3. Kiểm kết quả lần chạy CI đầu tiên ở tab Actions.
+
+Đã xong: project Neon ở Singapore với pgvector và Managed Better Auth, Object Storage, `pnpm-lock.yaml`,
+deploy Vercel, biến môi trường trên Dashboard kèm `CLOUDFLARE_ACCOUNT_ID`, region function `sin1`,
+sáu trang khung (`/`, `/sign-in` và năm mục chính) cùng bộ khung Playwright.

@@ -28,7 +28,9 @@
       "!**/dist",
       "!**/*.tsbuildinfo",
       "!**/next-env.d.ts",
-      "!**/drizzle"
+      "!**/drizzle",
+      "!**/test-results",
+      "!**/playwright-report"
     ]
   }
 }
