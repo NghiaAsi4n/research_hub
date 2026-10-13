@@ -71,14 +71,4 @@ Khai báo ở `apps/web/vercel.json` (Root Directory của project Vercel là `a
 | `/api/cron/briefing` | 09:00 | bản tin hằng ngày (Giai đoạn 6) |
 | `/api/cron/backup` | 18:00 | export sao lưu |
 
-## Tài liệu theo giai đoạn
 
-- `docs/phase-0/README.md` — Giai đoạn 0, đã xong.
-- `docs/phase-1/README.md` — Giai đoạn 1, chia thành chín việc kèm thứ tự làm.
-- Checklist chi tiết từng việc nằm cùng thư mục nhưng chỉ để ở máy; ticket theo dõi nằm ở project Jira `RH`.
-
-Đã xong: project Neon ở Singapore với pgvector và Managed Better Auth, Object Storage, `pnpm-lock.yaml`,
-deploy Vercel với alias theo nhánh `main`, biến môi trường trên Dashboard kèm `CLOUDFLARE_ACCOUNT_ID`,
-region function `sin1`, sáu trang khung (`/`, `/sign-in` và năm mục chính) cùng bộ khung Playwright,
-CI xanh, Vercel Authentication cho Production đã tắt, route `/api/ingest` phát URL ký sẵn, và `EMBED_DIM`
-đã thành cấu hình dùng chung trong `packages/core/src/env.ts`.
