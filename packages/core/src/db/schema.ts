@@ -59,7 +59,10 @@ export const documents = pgTable(
     // TODO(rà soát plan): chưa liệt kê giá trị. Tạm dùng: 'pending' | 'ready' | 'failed'.
     status: text('status').notNull().default('pending'),
     bytes: integer('bytes'),
+    // Số trang với nguồn PDF, null với HTML (T5 ghi vào khi trích xong).
+    pages: integer('pages'),
     meta: jsonb('meta'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex('documents_hash_idx').on(table.hash)],
 );
@@ -253,17 +256,21 @@ export const jobs = pgTable(
     // TODO(rà soát plan): chưa liệt kê giá trị. Tạm dùng: ingest | reindex | backup | briefing.
     type: text('type').notNull(),
     payload: jsonb('payload'),
-    idemKey: text('idem_key'),
+    // Bắt buộc có khoá chống trùng: cùng một việc gọi lại chỉ được tạo một job (plan mục 7.2).
+    idemKey: text('idem_key').notNull(),
     // queued | running | done | failed
     state: text('state').notNull().default('queued'),
     runAt: timestamp('run_at', { withTimezone: true }).notNull().defaultNow(),
     attempt: integer('attempt').notNull().default(0),
     leaseOwner: text('lease_owner'),
     leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex('jobs_idem_key_idx').on(table.idemKey),
     index('jobs_state_run_at_idx').on(table.state, table.runAt),
+    // Reaper quét job giữ lease quá hạn theo cột này.
+    index('jobs_lease_expires_at_idx').on(table.leaseExpiresAt),
   ],
 );
 
