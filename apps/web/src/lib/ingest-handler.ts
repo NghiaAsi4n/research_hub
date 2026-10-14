@@ -7,7 +7,21 @@ import {
   titleHint,
 } from '@research-hub/core/ingest';
 import type { IngestStore } from '@research-hub/core/ingest-store';
-import { buildStorageKey, presignUpload, UPLOAD_URL_TTL_SECONDS } from '@research-hub/core/storage';
+import {
+  abortMultipartUpload,
+  buildStorageKey,
+  completeMultipartUpload,
+  createMultipartUpload,
+  listMultipartParts,
+  MAX_UPLOAD_BYTES,
+  MULTIPART_PART_BYTES,
+  MULTIPART_THRESHOLD_BYTES,
+  objectSize,
+  presignMultipartPart,
+  presignUpload,
+  UPLOAD_URL_TTL_SECONDS,
+  uploadPartCount,
+} from '@research-hub/core/storage';
 import { guardRequest } from './guard';
 
 // Hai route của đường ingest (Giai đoạn 1, T3):
@@ -39,6 +53,14 @@ export function createIngestHandler(store: IngestStore) {
     }
 
     const target = parsed.target;
+    const bytes = body.bytes;
+    if (
+      target.kind === 'file' &&
+      bytes !== undefined &&
+      (typeof bytes !== 'number' || uploadPartCount(bytes) === null)
+    ) {
+      return Response.json({ error: 'invalid_bytes', maxBytes: MAX_UPLOAD_BYTES }, { status: 400 });
+    }
     const hash = documentHash(target);
     const idemKey = ingestIdemKey(target);
 
@@ -74,6 +96,7 @@ export function createIngestHandler(store: IngestStore) {
         storageKey: document.storageKey,
         url: target.kind === 'url' ? target.value : null,
         contentType: target.kind === 'file' ? target.contentType : null,
+        subject: guard.subject,
       },
     });
 
@@ -86,6 +109,64 @@ export function createIngestHandler(store: IngestStore) {
 
     if (target.kind !== 'file') {
       return Response.json(base);
+    }
+
+    if (typeof bytes === 'number' && bytes > MULTIPART_THRESHOLD_BYTES) {
+      try {
+        let upload = await store.getUploadJob(job.id);
+        if (
+          upload === null ||
+          upload.subject !== guard.subject ||
+          upload.state !== 'awaiting_upload'
+        ) {
+          return Response.json({ error: 'job_not_awaiting_upload' }, { status: 409 });
+        }
+        if (upload.uploadId === undefined) {
+          const uploadId = await createMultipartUpload(document.storageKey, target.contentType);
+          let saved: boolean;
+          try {
+            saved = await store.saveMultipartUpload({
+              jobId: job.id,
+              uploadId,
+              bytes,
+              partCount: uploadPartCount(bytes) as number,
+            });
+          } catch (error) {
+            await abortMultipartUpload(document.storageKey, uploadId).catch(() => undefined);
+            throw error;
+          }
+          if (!saved) await abortMultipartUpload(document.storageKey, uploadId);
+          upload = await store.getUploadJob(job.id);
+        }
+        if (
+          upload?.uploadId === undefined ||
+          upload.partCount === undefined ||
+          upload.bytes !== bytes
+        ) {
+          return Response.json({ error: 'upload_size_conflict' }, { status: 409 });
+        }
+        const parts = await Promise.all(
+          Array.from({ length: upload.partCount }, async (_, index) => ({
+            partNumber: index + 1,
+            uploadUrl: await presignMultipartPart(
+              document.storageKey,
+              upload.uploadId as string,
+              index + 1,
+            ),
+          })),
+        );
+        return Response.json({
+          ...base,
+          key: document.storageKey,
+          method: 'PUT',
+          multipart: true,
+          partSize: MULTIPART_PART_BYTES,
+          parts,
+          expiresIn: UPLOAD_URL_TTL_SECONDS,
+        });
+      } catch {
+        return Response.json({ error: 'storage_unavailable' }, { status: 503 });
+      }
     }
 
     let uploadUrl: string;
@@ -141,6 +222,13 @@ export function createIngestDoneHandler(store: IngestStore) {
       );
     }
 
+    const upload = await store.getUploadJob(jobId);
+    if (upload?.uploadId !== undefined) {
+      if (upload.subject !== guard.subject)
+        return Response.json({ error: 'job_not_found' }, { status: 404 });
+      return Response.json({ error: 'multipart_requires_parts' }, { status: 409 });
+    }
+
     const result = await store.markUploadComplete(
       rawBytes === undefined ? { jobId } : { jobId, bytes: rawBytes },
     );
@@ -150,5 +238,80 @@ export function createIngestDoneHandler(store: IngestStore) {
     }
 
     return Response.json({ jobId: result.jobId, documentId: result.documentId, state: 'queued' });
+  };
+}
+
+export function createMultipartHandler(store: IngestStore) {
+  return async function POST(request: Request): Promise<Response> {
+    const guard = await guardRequest({ route: 'ingest' });
+    if (!guard.ok) return guard.response;
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const jobId = typeof body.jobId === 'string' ? body.jobId : '';
+    const upload = JOB_ID_PATTERN.test(jobId) ? await store.getUploadJob(jobId) : null;
+    if (
+      upload?.state !== 'awaiting_upload' ||
+      upload.subject !== guard.subject ||
+      !upload.uploadId ||
+      !upload.partCount ||
+      !upload.bytes
+    ) {
+      return Response.json({ error: 'multipart_upload_not_found' }, { status: 404 });
+    }
+    if (body.action === 'sign') {
+      const partNumber = body.partNumber;
+      if (
+        typeof partNumber !== 'number' ||
+        !Number.isInteger(partNumber) ||
+        partNumber < 1 ||
+        partNumber > upload.partCount
+      ) {
+        return Response.json({ error: 'invalid_part_number' }, { status: 400 });
+      }
+      try {
+        const uploadUrl = await presignMultipartPart(
+          upload.storageKey,
+          upload.uploadId,
+          partNumber,
+        );
+        return Response.json({
+          partNumber,
+          uploadUrl,
+          method: 'PUT',
+          expiresIn: UPLOAD_URL_TTL_SECONDS,
+        });
+      } catch {
+        return Response.json({ error: 'storage_unavailable' }, { status: 503 });
+      }
+    }
+    if (body.action !== 'complete')
+      return Response.json({ error: 'invalid_action' }, { status: 400 });
+    try {
+      const listed = await listMultipartParts(upload.storageKey, upload.uploadId);
+      if (listed.length !== upload.partCount) {
+        return Response.json({ error: 'incomplete_upload' }, { status: 409 });
+      }
+      const parts: { partNumber: number; etag: string }[] = [];
+      for (let index = 0; index < listed.length; index += 1) {
+        const part = listed[index];
+        const expectedBytes =
+          index === listed.length - 1
+            ? upload.bytes - index * MULTIPART_PART_BYTES
+            : MULTIPART_PART_BYTES;
+        if (part?.PartNumber !== index + 1 || part.Size !== expectedBytes || !part.ETag) {
+          return Response.json({ error: 'invalid_uploaded_parts' }, { status: 409 });
+        }
+        parts.push({ partNumber: index + 1, etag: part.ETag });
+      }
+      await completeMultipartUpload(upload.storageKey, upload.uploadId, parts);
+    } catch {
+      // Complete may have succeeded while the response was lost; HEAD makes retry safe.
+      const size = await objectSize(upload.storageKey).catch(() => undefined);
+      if (size !== upload.bytes) {
+        return Response.json({ error: 'multipart_complete_failed' }, { status: 503 });
+      }
+    }
+    const result = await store.markUploadComplete({ jobId, bytes: upload.bytes });
+    if (!result) return Response.json({ error: 'job_not_awaiting_upload' }, { status: 409 });
+    return Response.json({ jobId, documentId: result.documentId, state: 'queued' });
   };
 }

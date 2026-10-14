@@ -1,8 +1,14 @@
 import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
+  ListPartsCommand,
   PutObjectCommand,
   S3Client,
+  UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { getEnv } from './env';
@@ -12,6 +18,15 @@ import { getEnv } from './env';
 // (giới hạn body 4.5 MB của Vercel Hobby).
 
 export const UPLOAD_URL_TTL_SECONDS = 300;
+export const MULTIPART_THRESHOLD_BYTES = 4_500_000;
+export const MULTIPART_PART_BYTES = 5 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+export const MAX_MULTIPART_PARTS = Math.ceil(MAX_UPLOAD_BYTES / MULTIPART_PART_BYTES);
+
+export function uploadPartCount(bytes: number): number | null {
+  if (!Number.isSafeInteger(bytes) || bytes <= 0 || bytes > MAX_UPLOAD_BYTES) return null;
+  return Math.ceil(bytes / MULTIPART_PART_BYTES);
+}
 
 function createClient(): S3Client {
   const env = getEnv();
@@ -64,6 +79,75 @@ export function presignDownload(key: string, expiresIn = UPLOAD_URL_TTL_SECONDS)
   return getSignedUrl(client(), new GetObjectCommand({ Bucket: bucketName(), Key: key }), {
     expiresIn,
   });
+}
+
+export async function createMultipartUpload(key: string, contentType: string): Promise<string> {
+  const result = await client().send(
+    new CreateMultipartUploadCommand({
+      Bucket: bucketName(),
+      Key: key,
+      ContentType: contentType,
+    }),
+  );
+  if (!result.UploadId) throw new Error('Object Storage did not return an upload ID');
+  return result.UploadId;
+}
+
+export function presignMultipartPart(key: string, uploadId: string, partNumber: number) {
+  return getSignedUrl(
+    client(),
+    new UploadPartCommand({
+      Bucket: bucketName(),
+      Key: key,
+      UploadId: uploadId,
+      PartNumber: partNumber,
+    }),
+    { expiresIn: UPLOAD_URL_TTL_SECONDS },
+  );
+}
+
+export async function listMultipartParts(key: string, uploadId: string) {
+  const response = await client().send(
+    new ListPartsCommand({
+      Bucket: bucketName(),
+      Key: key,
+      UploadId: uploadId,
+      MaxParts: MAX_MULTIPART_PARTS,
+    }),
+  );
+  return response.Parts ?? [];
+}
+
+export async function objectSize(key: string): Promise<number | undefined> {
+  const response = await client().send(new HeadObjectCommand({ Bucket: bucketName(), Key: key }));
+  return response.ContentLength;
+}
+
+export function completeMultipartUpload(
+  key: string,
+  uploadId: string,
+  parts: { partNumber: number; etag: string }[],
+) {
+  return client().send(
+    new CompleteMultipartUploadCommand({
+      Bucket: bucketName(),
+      Key: key,
+      UploadId: uploadId,
+      MultipartUpload: {
+        Parts: parts.map((part) => ({ PartNumber: part.partNumber, ETag: part.etag })),
+      },
+    }),
+  );
+}
+
+export function abortMultipartUpload(key: string, uploadId: string) {
+  return client().send(
+    new AbortMultipartUploadCommand({
+      Bucket: bucketName(),
+      Key: key,
+      UploadId: uploadId,
+    }),
+  );
 }
 
 // Ghi thẳng một object từ function hoặc pipeline: dùng cho bản Markdown sạch của T4/T5.

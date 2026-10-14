@@ -1,14 +1,35 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { guardMock, presignMock } = vi.hoisted(() => ({
+const {
+  guardMock,
+  presignMock,
+  initiateMock,
+  signPartMock,
+  listPartsMock,
+  completeMock,
+  abortMock,
+} = vi.hoisted(() => ({
   guardMock: vi.fn(),
   presignMock: vi.fn(),
+  initiateMock: vi.fn(),
+  signPartMock: vi.fn(),
+  listPartsMock: vi.fn(),
+  completeMock: vi.fn(),
+  abortMock: vi.fn(),
 }));
 
 vi.mock('./guard', () => ({ guardRequest: guardMock }));
 vi.mock('@research-hub/core/storage', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@research-hub/core/storage')>();
-  return { ...actual, presignUpload: presignMock };
+  return {
+    ...actual,
+    presignUpload: presignMock,
+    createMultipartUpload: initiateMock,
+    presignMultipartPart: signPartMock,
+    listMultipartParts: listPartsMock,
+    completeMultipartUpload: completeMock,
+    abortMultipartUpload: abortMock,
+  };
 });
 
 import type {
@@ -17,7 +38,11 @@ import type {
   JobUpsert,
   SourceUpsert,
 } from '@research-hub/core/ingest-store';
-import { createIngestDoneHandler, createIngestHandler } from './ingest-handler';
+import {
+  createIngestDoneHandler,
+  createIngestHandler,
+  createMultipartHandler,
+} from './ingest-handler';
 
 type StoredDocument = DocumentUpsert & { id: string; bytes: number | null };
 type StoredJob = JobUpsert & { id: string };
@@ -60,6 +85,24 @@ function memoryStore() {
       jobs.set(row.idemKey, created);
       return { id: created.id, state: created.state };
     },
+    async getUploadJob(jobId) {
+      const job = [...jobs.values()].find((entry) => entry.id === jobId);
+      if (!job || typeof job.payload.storageKey !== 'string') return null;
+      return {
+        state: job.state,
+        storageKey: job.payload.storageKey,
+        ...(typeof job.payload.subject === 'string' ? { subject: job.payload.subject } : {}),
+        ...(typeof job.payload.uploadId === 'string' ? { uploadId: job.payload.uploadId } : {}),
+        ...(typeof job.payload.bytes === 'number' ? { bytes: job.payload.bytes } : {}),
+        ...(typeof job.payload.partCount === 'number' ? { partCount: job.payload.partCount } : {}),
+      };
+    },
+    async saveMultipartUpload({ jobId, uploadId, bytes, partCount }) {
+      const job = [...jobs.values()].find((entry) => entry.id === jobId);
+      if (job?.state !== 'awaiting_upload' || job.payload.uploadId) return false;
+      job.payload = { ...job.payload, uploadId, bytes, partCount };
+      return true;
+    },
     async markUploadComplete({ jobId, bytes }) {
       const job = [...jobs.values()].find((entry) => entry.id === jobId);
       if (job === undefined || job.state !== 'awaiting_upload') {
@@ -92,6 +135,92 @@ beforeEach(() => {
   guardMock.mockResolvedValue({ ok: true, subject: 'user-1' });
   presignMock.mockReset();
   presignMock.mockResolvedValue('https://storage.example/upload');
+  initiateMock.mockReset().mockResolvedValue('upload-1');
+  signPartMock
+    .mockReset()
+    .mockImplementation(
+      (_: string, __: string, part: number) => `https://storage.example/part/${part}`,
+    );
+  completeMock.mockReset().mockResolvedValue({});
+  listPartsMock.mockReset().mockResolvedValue([
+    { PartNumber: 1, Size: 5 * 1024 * 1024, ETag: 'etag-1' },
+    { PartNumber: 2, Size: 5 * 1024 * 1024, ETag: 'etag-2' },
+    { PartNumber: 3, Size: 1024 * 1024, ETag: 'etag-3' },
+  ]);
+  abortMock.mockReset().mockResolvedValue({});
+});
+
+describe('multipart PDF upload', () => {
+  const bytes = 11 * 1024 * 1024;
+  const request = (body: unknown) =>
+    new Request('http://localhost/api/ingest/multipart', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+  it('signs three parts, reuses the session, and queues only after completion', async () => {
+    const { store, jobs, documents } = memoryStore();
+    const first = await (
+      await createIngestHandler(store)(ingestRequest({ ...fileBody, bytes }))
+    ).json();
+    expect(first).toMatchObject({ multipart: true, partSize: 5 * 1024 * 1024 });
+    expect(first.parts).toHaveLength(3);
+    expect(presignMock).not.toHaveBeenCalled();
+    const again = await (
+      await createIngestHandler(store)(ingestRequest({ ...fileBody, bytes }))
+    ).json();
+    expect(again.jobId).toBe(first.jobId);
+    expect(initiateMock).toHaveBeenCalledTimes(1);
+
+    const doneWithoutParts = await createIngestDoneHandler(store)(request({ jobId: first.jobId }));
+    expect(doneWithoutParts.status).toBe(409);
+    const signed = await createMultipartHandler(store)(
+      request({ jobId: first.jobId, action: 'sign', partNumber: 2 }),
+    );
+    expect((await signed.json()).uploadUrl).toContain('/part/2');
+
+    const parts = [1, 2, 3].map((partNumber) => ({ partNumber, etag: `etag-${partNumber}` }));
+    const completed = await createMultipartHandler(store)(
+      request({ jobId: first.jobId, action: 'complete' }),
+    );
+    expect(completed.status).toBe(200);
+    expect(completeMock).toHaveBeenCalledWith(first.key, 'upload-1', parts);
+    expect([...jobs.values()][0]?.state).toBe('queued');
+    expect([...documents.values()][0]?.bytes).toBe(bytes);
+  });
+
+  it('rejects oversized files and invalid completion without contacting storage', async () => {
+    const { store, jobs } = memoryStore();
+    const oversized = await createIngestHandler(store)(
+      ingestRequest({ ...fileBody, bytes: 101 * 1024 * 1024 }),
+    );
+    expect(oversized.status).toBe(400);
+    expect(jobs.size).toBe(0);
+    const first = await (
+      await createIngestHandler(store)(ingestRequest({ ...fileBody, bytes }))
+    ).json();
+    listPartsMock.mockResolvedValue([{ PartNumber: 1, Size: 10, ETag: 'bad' }]);
+    const bad = await createMultipartHandler(store)(
+      request({ jobId: first.jobId, action: 'complete' }),
+    );
+    expect(bad.status).toBe(409);
+    listPartsMock.mockResolvedValue([
+      { PartNumber: 1, Size: 5 * 1024 * 1024 + 1, ETag: 'etag-1' },
+      { PartNumber: 2, Size: 5 * 1024 * 1024, ETag: 'etag-2' },
+      { PartNumber: 3, Size: 1024 * 1024, ETag: 'etag-3' },
+    ]);
+    const wrongSize = await createMultipartHandler(store)(
+      request({ jobId: first.jobId, action: 'complete' }),
+    );
+    expect(wrongSize.status).toBe(409);
+    expect(completeMock).not.toHaveBeenCalled();
+
+    guardMock.mockResolvedValue({ ok: true, subject: 'another-user' });
+    const crossUser = await createMultipartHandler(store)(
+      request({ jobId: first.jobId, action: 'sign', partNumber: 1 }),
+    );
+    expect(crossUser.status).toBe(404);
+  });
 });
 
 describe('POST /api/ingest', () => {

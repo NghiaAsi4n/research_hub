@@ -37,6 +37,20 @@ export type IngestStore = {
   upsertSource(row: SourceUpsert): Promise<{ id: string }>;
   upsertDocument(row: DocumentUpsert): Promise<{ id: string; storageKey: string }>;
   upsertJob(row: JobUpsert): Promise<{ id: string; state: string }>;
+  getUploadJob(jobId: string): Promise<{
+    state: string;
+    storageKey: string;
+    subject?: string;
+    uploadId?: string;
+    bytes?: number;
+    partCount?: number;
+  } | null>;
+  saveMultipartUpload(input: {
+    jobId: string;
+    uploadId: string;
+    bytes: number;
+    partCount: number;
+  }): Promise<boolean>;
   markUploadComplete(input: {
     jobId: string;
     bytes?: number;
@@ -140,6 +154,44 @@ export function createIngestStore(db?: Db): IngestStore {
           .where(eq(documents.id, documentId));
       }
       return { jobId: job.id, documentId };
+    },
+    async getUploadJob(jobId) {
+      const [job] = await handle()
+        .select({ state: jobs.state, payload: jobs.payload })
+        .from(jobs)
+        .where(eq(jobs.id, jobId))
+        .limit(1);
+      if (!job?.payload || typeof job.payload !== 'object') return null;
+      const payload = job.payload as Record<string, unknown>;
+      if (typeof payload.storageKey !== 'string') return null;
+      return {
+        state: job.state,
+        storageKey: payload.storageKey,
+        ...(typeof payload.subject === 'string' ? { subject: payload.subject } : {}),
+        ...(typeof payload.uploadId === 'string' ? { uploadId: payload.uploadId } : {}),
+        ...(typeof payload.bytes === 'number' ? { bytes: payload.bytes } : {}),
+        ...(typeof payload.partCount === 'number' ? { partCount: payload.partCount } : {}),
+      };
+    },
+    async saveMultipartUpload(input) {
+      const [job] = await handle()
+        .update(jobs)
+        .set({
+          payload: sql`coalesce(${jobs.payload}, '{}'::jsonb) || ${JSON.stringify({
+            uploadId: input.uploadId,
+            bytes: input.bytes,
+            partCount: input.partCount,
+          })}::jsonb`,
+        })
+        .where(
+          and(
+            eq(jobs.id, input.jobId),
+            eq(jobs.state, 'awaiting_upload'),
+            sql`not (${jobs.payload} ? 'uploadId')`,
+          ),
+        )
+        .returning({ id: jobs.id });
+      return job !== undefined;
     },
   };
 }
