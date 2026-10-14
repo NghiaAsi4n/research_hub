@@ -40,7 +40,7 @@ describeLive('multipart Object Storage and PDF jobs', () => {
   afterAll(async () => {
     await Promise.all(
       [key, `${key}.md`, ...[1, 2, 3].map((n) => `${key}.page-${n}.md`)].map((objectKey) =>
-        deleteObject(objectKey).catch(() => undefined),
+        deleteObject(objectKey),
       ),
     );
   });
