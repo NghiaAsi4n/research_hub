@@ -120,7 +120,10 @@ async function readTitle(document: {
   return undefined;
 }
 
-export async function extractPdfText(bytes: Uint8Array): Promise<PdfTextResult> {
+export async function extractPdfText(
+  bytes: Uint8Array,
+  range?: { startPage: number; maxPages: number; deadlineAt?: number },
+): Promise<PdfTextResult> {
   const task = getDocument({
     data: bytes,
     // Không tải font hay ảnh: chỉ đọc lớp văn bản, mà function không có DOM để dựng font.
@@ -144,7 +147,20 @@ export async function extractPdfText(bytes: Uint8Array): Promise<PdfTextResult> 
 
   try {
     const pages: PdfPageText[] = [];
-    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+    const startPage = range?.startPage ?? 1;
+    const endPage =
+      range === undefined
+        ? document.numPages
+        : Math.min(document.numPages, startPage + range.maxPages - 1);
+    if (
+      !Number.isInteger(startPage) ||
+      startPage < 1 ||
+      !Number.isInteger(endPage) ||
+      (document.numPages > 0 && startPage > document.numPages)
+    ) {
+      return { kind: 'error', reason: 'extract_failed', detail: 'Invalid PDF page range' };
+    }
+    for (let pageNumber = startPage; pageNumber <= endPage; pageNumber += 1) {
       const page = await document.getPage(pageNumber);
       const content = await page.getTextContent();
       const items: TextItemLike[] = [];
@@ -159,6 +175,7 @@ export async function extractPdfText(bytes: Uint8Array): Promise<PdfTextResult> 
         }
       }
       pages.push({ pageNumber, lines: linesFromTextItems(items) });
+      if (range?.deadlineAt !== undefined && Date.now() >= range.deadlineAt) break;
     }
 
     const pageCount = document.numPages;
@@ -171,7 +188,7 @@ export async function extractPdfText(bytes: Uint8Array): Promise<PdfTextResult> 
     if (pageCount === 0) {
       return { kind: 'unreadable', reason: 'empty_document', pageCount, textLength };
     }
-    if (textLength < MIN_PDF_TEXT_CHARS) {
+    if (range === undefined && textLength < MIN_PDF_TEXT_CHARS) {
       // Bản scan: trang có ảnh nhưng không có mảnh văn bản nào.
       return { kind: 'unreadable', reason: 'no_text_layer', pageCount, textLength };
     }

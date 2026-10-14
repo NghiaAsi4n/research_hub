@@ -36,6 +36,9 @@ importers:
       '@research-hub/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@research-hub/pipeline':
+        specifier: workspace:*
+        version: link:../../packages/pipeline
       next:
         specifier: ^16.4.0
         version: 16.4.0(@playwright/test@1.64.0)(@types/node@26.6.5)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)

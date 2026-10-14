@@ -13,6 +13,7 @@
     "./guard": "./src/guard.ts",
     "./ingest": "./src/ingest.ts",
     "./ingest-store": "./src/ingest-store.ts",
+    "./ingest-job-store": "./src/ingest-job-store.ts",
     "./document-store": "./src/document-store.ts"
   },
   "scripts": {

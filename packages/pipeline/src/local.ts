@@ -1,9 +1,23 @@
-// Điểm vào CLI cho chế độ chạy máy (plan mục 12.2).
-// Giai đoạn 0: chỉ xác nhận tiến trình chạy được, chưa nhặt job.
-const BANNER = 'Research Hub — chế độ chạy máy (khung Giai đoạn 0, chưa nhặt job)';
+import { createDocumentStore } from '@research-hub/core/document-store';
+import { createPdfJobStore } from '@research-hub/core/ingest-job-store';
+import { ingestPdfBatch } from './read/ingest-pdf-batch';
 
-function main(): void {
-  process.stdout.write(`${BANNER}\n`);
+const jobs = createPdfJobStore();
+const documents = createDocumentStore();
+
+async function main() {
+  let processed = 0;
+  while (true) {
+    const job = await jobs.claim();
+    if (!job) break;
+    const result = await ingestPdfBatch({ job, jobs, documents });
+    process.stdout.write(`${job.id}: ${result}\n`);
+    processed += 1;
+  }
+  process.stdout.write(`Processed ${processed} PDF jobs\n`);
 }
 
-main();
+main().catch((error: unknown) => {
+  process.stderr.write(`${String(error)}\n`);
+  process.exitCode = 1;
+});
