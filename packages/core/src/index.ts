@@ -56,6 +56,8 @@ export {
 } from './ingest-store';
 export {
   buildStorageKey,
+  deleteObject,
+  getObjectBytes,
   markdownKeyFor,
   presignDownload,
   presignUpload,

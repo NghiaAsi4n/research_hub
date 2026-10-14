@@ -1,4 +1,9 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { getEnv } from './env';
 
@@ -66,6 +71,21 @@ export function putObject(key: string, body: string | Uint8Array, contentType: s
   return client().send(
     new PutObjectCommand({ Bucket: bucketName(), Key: key, Body: body, ContentType: contentType }),
   );
+}
+
+// Đọc trọn một object thành mảng byte: fetcher PDF (T5) cần cả file trước khi trích lớp văn bản.
+// T7 thay đường này bằng luồng khi cần file lớn hơn.
+export async function getObjectBytes(key: string): Promise<Uint8Array> {
+  const response = await client().send(new GetObjectCommand({ Bucket: bucketName(), Key: key }));
+  if (response.Body === undefined) {
+    throw new Error(`Object rỗng: ${key}`);
+  }
+  return response.Body.transformToByteArray();
+}
+
+// Xoá object: dùng để dọn file kiểm chứng và, về sau, dọn bản ghi hỏng.
+export function deleteObject(key: string) {
+  return client().send(new DeleteObjectCommand({ Bucket: bucketName(), Key: key }));
 }
 
 // Quy ước khoá: <kind>/<yyyy>/<mm>/<uuid>.<ext> cho file gốc,

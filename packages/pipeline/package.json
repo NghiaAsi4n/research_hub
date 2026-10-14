@@ -16,6 +16,7 @@
     "@research-hub/core": "workspace:*",
     "@types/turndown": "^5.0.6",
     "linkedom": "^0.18.13",
+    "pdfjs-dist": "^6.4.299",
     "turndown": "^7.2.4",
     "turndown-plugin-gfm": "^1.0.2"
   },
