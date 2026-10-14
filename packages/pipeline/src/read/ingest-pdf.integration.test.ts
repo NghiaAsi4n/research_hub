@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import type { DocumentStore } from '@research-hub/core/document-store';
-import { deleteObject, getObjectBytes, presignDownload, putObject } from '@research-hub/core/storage';
+import {
+  deleteObject,
+  getObjectBytes,
+  presignDownload,
+  putObject,
+} from '@research-hub/core/storage';
 import { afterAll, describe, expect, it } from 'vitest';
 import { USER_AGENT } from './fetch-html';
 import { INGEST_BUDGET_MS } from './ingest-html';
@@ -105,45 +110,48 @@ describeLive('kiểm chứng sống T5 trên PDF thật', () => {
     expect(elapsed).toBeLessThan(INGEST_BUDGET_MS);
   });
 
-  itWithStorage('đi trọn đường ingest qua Object Storage thật và đọc lại bản Markdown', async () => {
-    const bytes = await downloadPdf(pdfUrl);
-    await putObject(storageKey, bytes, 'application/pdf');
+  itWithStorage(
+    'đi trọn đường ingest qua Object Storage thật và đọc lại bản Markdown',
+    async () => {
+      const bytes = await downloadPdf(pdfUrl);
+      await putObject(storageKey, bytes, 'application/pdf');
 
-    const ready: Array<Record<string, unknown>> = [];
-    const documents: DocumentStore = {
-      async markReady(input) {
-        ready.push({ ...input });
-      },
-      async markUnreadable(input) {
-        throw new Error(`Không mong đợi unreadable: ${JSON.stringify(input)}`);
-      },
-      async markFailed(input) {
-        throw new Error(`Không mong đợi failed: ${JSON.stringify(input)}`);
-      },
-    };
+      const ready: Array<Record<string, unknown>> = [];
+      const documents: DocumentStore = {
+        async markReady(input) {
+          ready.push({ ...input });
+        },
+        async markUnreadable(input) {
+          throw new Error(`Không mong đợi unreadable: ${JSON.stringify(input)}`);
+        },
+        async markFailed(input) {
+          throw new Error(`Không mong đợi failed: ${JSON.stringify(input)}`);
+        },
+      };
 
-    const outcome = await ingestPdfDocument({
-      documentId: crypto.randomUUID(),
-      storageKey,
-      documents,
-      titleHint: 'kiem-chung-t5.pdf',
-    });
+      const outcome = await ingestPdfDocument({
+        documentId: crypto.randomUUID(),
+        storageKey,
+        documents,
+        titleHint: 'kiem-chung-t5.pdf',
+      });
 
-    expect(outcome.kind).toBe('ready');
-    if (outcome.kind !== 'ready') {
-      return;
-    }
-    expect(outcome.pages).toBeGreaterThan(0);
-    expect(outcome.readMs).toBeLessThan(INGEST_BUDGET_MS);
-    expect(ready[0]).toMatchObject({ pages: outcome.pages });
+      expect(outcome.kind).toBe('ready');
+      if (outcome.kind !== 'ready') {
+        return;
+      }
+      expect(outcome.pages).toBeGreaterThan(0);
+      expect(outcome.readMs).toBeLessThan(INGEST_BUDGET_MS);
+      expect(ready[0]).toMatchObject({ pages: outcome.pages });
 
-    // Bản Markdown phải nằm thật trên Object Storage, không chỉ được báo là đã ghi.
-    const markdown = new TextDecoder().decode(await getObjectBytes(markdownKey));
-    expect(markdown).toContain('<!-- page: 1 -->');
-    expect(markdown).toContain(`<!-- page: ${outcome.pages} -->`);
+      // Bản Markdown phải nằm thật trên Object Storage, không chỉ được báo là đã ghi.
+      const markdown = new TextDecoder().decode(await getObjectBytes(markdownKey));
+      expect(markdown).toContain('<!-- page: 1 -->');
+      expect(markdown).toContain(`<!-- page: ${outcome.pages} -->`);
 
-    const head = await fetch(await presignDownload(markdownKey));
-    expect(head.status).toBe(200);
-    await head.arrayBuffer();
-  });
+      const head = await fetch(await presignDownload(markdownKey));
+      expect(head.status).toBe(200);
+      await head.arrayBuffer();
+    },
+  );
 });

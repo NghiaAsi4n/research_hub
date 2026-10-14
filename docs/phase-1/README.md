@@ -26,7 +26,7 @@
 - [ ] Dán một URL và một PDF dưới 4.5 MB, đọc được bản sạch.
 - [ ] Ingest một tài liệu không vượt 300 giây.
 - [ ] Ingest 50 tài liệu liên tiếp không lỗi.
-- [ ] PDF lớn hơn 4.5 MB upload bằng multipart rồi ingest xong qua nhiều job.
+- [x] PDF lớn hơn 4.5 MB upload bằng multipart rồi ingest xong qua nhiều job.
 - [ ] Request thiếu session hợp lệ hoặc vượt rate limit bị từ chối và không gọi model.
 
 ## Nhánh
