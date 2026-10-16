@@ -58,9 +58,13 @@ export {
   buildStorageKey,
   deleteObject,
   getObjectBytes,
+  getObjectChunks,
+  getObjectRange,
+  MAX_OBJECT_RANGE_BYTES,
   markdownKeyFor,
   presignDownload,
   presignUpload,
   putObject,
+  putObjectChunks,
   UPLOAD_URL_TTL_SECONDS,
 } from './storage';

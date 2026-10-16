@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import type { DocumentStore } from '@research-hub/core/document-store';
 import type {
@@ -11,9 +12,14 @@ import {
   createMultipartUpload,
   deleteObject,
   getObjectBytes,
+  getObjectChunks,
+  getObjectRange,
   listMultipartParts,
+  MAX_OBJECT_RANGE_BYTES,
   MULTIPART_PART_BYTES,
+  objectSize,
   presignMultipartPart,
+  putObjectChunks,
 } from '@research-hub/core/storage';
 import { afterAll, describe, expect, it } from 'vitest';
 import { ingestPdfBatch } from './ingest-pdf-batch';
@@ -35,15 +41,52 @@ const live =
   ].every((name) => Boolean(process.env[name]));
 const describeLive = live ? describe : describe.skip;
 const key = `documents/verify/t6-${crypto.randomUUID()}.pdf`;
+const streamKey = `documents/verify/t7-${crypto.randomUUID()}.bin`;
 
 describeLive('multipart Object Storage and PDF jobs', () => {
   afterAll(async () => {
-    await Promise.all(
-      [key, `${key}.md`, ...[1, 2, 3].map((n) => `${key}.page-${n}.md`)].map((objectKey) =>
-        deleteObject(objectKey),
+    await Promise.all([
+      ...[key, `${key}.md`, ...[1, 2, 3].map((n) => `${key}.page-${n}.md`), streamKey].map(
+        (objectKey) => deleteObject(objectKey),
       ),
-    );
+    ]);
   });
+
+  it('streams a >10 MiB Object Storage object through multipart upload and bounded reads', async () => {
+    const totalBytes = 11 * 1024 * 1024 + 37;
+    const generatedChunkBytes = 512 * 1024;
+    const expectedHash = createHash('sha256');
+    async function* source(): AsyncGenerator<Uint8Array> {
+      for (let offset = 0; offset < totalBytes; offset += generatedChunkBytes) {
+        const size = Math.min(generatedChunkBytes, totalBytes - offset);
+        const chunk = new Uint8Array(size).fill(Math.floor(offset / generatedChunkBytes) % 251);
+        expectedHash.update(chunk);
+        yield chunk;
+      }
+    }
+
+    const writtenBytes = await putObjectChunks(streamKey, source(), 'application/octet-stream');
+    expect(writtenBytes).toBe(totalBytes);
+    expect(await objectSize(streamKey)).toBe(totalBytes);
+
+    const firstRange = await getObjectRange(streamKey, 0, MAX_OBJECT_RANGE_BYTES);
+    const lastRange = await getObjectRange(
+      streamKey,
+      totalBytes - MAX_OBJECT_RANGE_BYTES,
+      totalBytes,
+    );
+    expect(firstRange.byteLength).toBe(MAX_OBJECT_RANGE_BYTES);
+    expect(lastRange.byteLength).toBe(MAX_OBJECT_RANGE_BYTES);
+
+    const actualHash = createHash('sha256');
+    let streamedBytes = 0;
+    for await (const chunk of getObjectChunks(streamKey)) {
+      actualHash.update(chunk);
+      streamedBytes += chunk.byteLength;
+    }
+    expect(streamedBytes).toBe(totalBytes);
+    expect(actualHash.digest('hex')).toBe(expectedHash.digest('hex'));
+  }, 120_000);
 
   it('uploads a >4.5 MB PDF using signed parts and ingests it in three jobs', async () => {
     const fixture = readFileSync(new URL('./__fixtures__/contract-3-pages.pdf', import.meta.url));

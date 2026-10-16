@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { extractPdfText, linesFromTextItems, MIN_PDF_TEXT_CHARS } from './pdf-text';
+import {
+  extractPdfText,
+  extractPdfTextFromRanges,
+  linesFromTextItems,
+  MIN_PDF_TEXT_CHARS,
+  PDF_READ_RANGE_BYTES,
+} from './pdf-text';
 
 // Fixture sinh bằng `packages/pipeline/scripts/make-pdf-fixtures.py`: một hợp đồng ba trang có tiêu
 // đề cỡ lớn, mục cỡ vừa và thân bài cỡ nhỏ, cùng một PDF chỉ có ảnh (giả lập bản scan).
@@ -11,6 +17,60 @@ const contractBytes = new Uint8Array(
 const scanBytes = new Uint8Array(
   readFileSync(new URL('./__fixtures__/scan-1-page.pdf', import.meta.url)),
 );
+
+function largePdfRangeSource(paddingBytes: number) {
+  const fixture = new Uint8Array(
+    readFileSync(new URL('./__fixtures__/contract-3-pages.pdf', import.meta.url)),
+  );
+  const fixtureText = new TextDecoder().decode(fixture);
+  const xrefOffset = fixtureText.lastIndexOf('\nxref\n') + 1;
+  const prefix = fixture.subarray(0, xrefOffset);
+  const oldXref = fixtureText.slice(xrefOffset);
+  const entries = oldXref.match(/^xref\n0 12\n([\s\S]*?)trailer\n/)?.[1];
+  if (entries === undefined) throw new Error('Fixture has no classic cross-reference table');
+
+  const encoder = new TextEncoder();
+  const objectOffset = prefix.byteLength;
+  const objectHeader = encoder.encode(`12 0 obj\n<< /Length ${paddingBytes} >>\nstream\n`);
+  const objectTail = encoder.encode('\nendstream\nendobj\n');
+  const xrefStart = objectOffset + objectHeader.byteLength + paddingBytes + objectTail.byteLength;
+  const xref = encoder.encode(
+    `xref\n0 13\n${entries}${String(objectOffset).padStart(10, '0')} 00000 n \ntrailer\n<< /Size 13 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`,
+  );
+  const length = xrefStart + xref.byteLength;
+  const segments = [
+    { offset: 0, bytes: prefix },
+    { offset: objectOffset, bytes: objectHeader },
+    { offset: objectOffset + objectHeader.byteLength + paddingBytes, bytes: objectTail },
+    { offset: xrefStart, bytes: xref },
+  ];
+  const reads = { bytes: 0, largestRange: 0 };
+
+  return {
+    length,
+    reads,
+    async readRange(begin: number, end: number): Promise<Uint8Array> {
+      const chunk = new Uint8Array(end - begin);
+      chunk.fill(0x20);
+      reads.bytes += chunk.byteLength;
+      reads.largestRange = Math.max(reads.largestRange, chunk.byteLength);
+
+      for (const segment of segments) {
+        const segmentEnd = segment.offset + segment.bytes.byteLength;
+        const overlapStart = Math.max(begin, segment.offset);
+        const overlapEnd = Math.min(end, segmentEnd);
+        if (overlapStart < overlapEnd) {
+          chunk.set(
+            segment.bytes.subarray(overlapStart - segment.offset, overlapEnd - segment.offset),
+            overlapStart - begin,
+          );
+        }
+      }
+
+      return chunk;
+    },
+  };
+}
 
 describe('linesFromTextItems', () => {
   it('nối các mảnh cùng hàng và tách hàng theo cờ xuống dòng', () => {
@@ -78,5 +138,32 @@ describe('extractPdfText', () => {
     if (result.kind === 'error') {
       expect(result.detail.length).toBeGreaterThan(0);
     }
+  });
+
+  it('trích PDF 32 MiB qua các range nhỏ thay vì giữ toàn bộ file trong bộ nhớ', async () => {
+    const source = largePdfRangeSource(32 * 1024 * 1024);
+    const result = await extractPdfTextFromRanges(source, { startPage: 1, maxPages: 1 });
+
+    expect(result.kind).toBe('ok');
+    if (result.kind !== 'ok') return;
+
+    expect(result.pageCount).toBe(3);
+    expect(result.pages[0]?.lines[0]?.text).toBe('HOP DONG MAU VE CUNG CAP DICH VU');
+    expect(source.reads.largestRange).toBeLessThanOrEqual(PDF_READ_RANGE_BYTES);
+    expect(source.reads.bytes).toBeLessThan(source.length / 16);
+  });
+
+  it('phân biệt lỗi đọc range từ Object Storage với PDF hỏng', async () => {
+    const result = await extractPdfTextFromRanges(
+      {
+        length: 32 * 1024 * 1024,
+        async readRange() {
+          throw new Error('NoSuchKey');
+        },
+      },
+      { startPage: 1, maxPages: 1 },
+    );
+
+    expect(result).toMatchObject({ kind: 'error', reason: 'storage_read', detail: 'NoSuchKey' });
   });
 });

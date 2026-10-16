@@ -1,4 +1,4 @@
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { getDocument, PDFDataRangeTransport } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 // Trích lớp văn bản của PDF bằng pdf.js (Giai đoạn 1, T5).
 //
@@ -11,6 +11,12 @@ import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 // Hàm nhận `Uint8Array` vì pdf.js có thể nhận quyền sở hữu buffer; gọi ở đây luôn truyền bản sao.
 
 export const MIN_PDF_TEXT_CHARS = 40;
+export const PDF_READ_RANGE_BYTES = 64 * 1024;
+
+export type PdfByteRangeSource = {
+  length: number;
+  readRange(begin: number, end: number, signal?: AbortSignal): Promise<Uint8Array>;
+};
 
 // Hai dòng cùng một hàng chữ trong PDF thường lệch nhau vài phần nghìn đơn vị; lấy nửa chiều cao
 // chữ làm ngưỡng tách dòng là cách pdf.js khuyến nghị khi ghép dòng từ các mảnh văn bản.
@@ -38,7 +44,7 @@ export type PdfTextResult =
     }
   | {
       kind: 'error';
-      reason: 'invalid_pdf' | 'password_protected' | 'extract_failed';
+      reason: 'invalid_pdf' | 'password_protected' | 'extract_failed' | 'storage_read';
       detail: string;
     };
 
@@ -120,24 +126,87 @@ async function readTitle(document: {
   return undefined;
 }
 
-export async function extractPdfText(
-  bytes: Uint8Array,
-  range?: { startPage: number; maxPages: number; deadlineAt?: number },
-): Promise<PdfTextResult> {
-  const task = getDocument({
-    data: bytes,
-    // Không tải font hay ảnh: chỉ đọc lớp văn bản, mà function không có DOM để dựng font.
-    disableFontFace: true,
-    useSystemFonts: false,
-    // 0 = chỉ log lỗi: pdf.js cảnh báo thiếu `standardFontDataUrl` khi không render, không hữu ích ở đây.
-    verbosity: 0,
+class PdfObjectRangeTransport extends PDFDataRangeTransport {
+  private readonly controller = new AbortController();
+  private readonly requests = new Set<Promise<void>>();
+  private readFailure: unknown;
+  private rejectFailure!: (error: unknown) => void;
+  private readonly failureSignal = new Promise<never>((_resolve, reject) => {
+    this.rejectFailure = reject;
   });
+  private readonly source: PdfByteRangeSource;
 
+  constructor(source: PdfByteRangeSource) {
+    super(source.length, null, true);
+    this.source = source;
+  }
+
+  get failure(): unknown {
+    return this.readFailure;
+  }
+
+  get failed(): Promise<never> {
+    return this.failureSignal;
+  }
+
+  override requestDataRange(begin: number, end: number): void {
+    if (this.readFailure !== undefined || this.controller.signal.aborted) {
+      return;
+    }
+
+    const request = this.source
+      .readRange(begin, end, this.controller.signal)
+      .then((bytes) => {
+        if (this.controller.signal.aborted) return;
+        if (bytes.byteLength !== end - begin) {
+          throw new Error(
+            `Object Storage returned ${bytes.byteLength} bytes for range ${begin}-${end}`,
+          );
+        }
+        this.onDataRange(begin, bytes);
+      })
+      .catch((error: unknown) => {
+        if (this.controller.signal.aborted) return;
+        this.readFailure = error;
+        this.controller.abort();
+        this.rejectFailure(error);
+      });
+
+    this.requests.add(request);
+    void request.then(() => this.requests.delete(request));
+  }
+
+  override abort(): void {
+    this.controller.abort();
+  }
+
+  async waitForRequests(): Promise<void> {
+    await Promise.allSettled([...this.requests]);
+  }
+}
+
+function rangeReadError(transport?: PdfObjectRangeTransport): PdfTextResult | undefined {
+  if (transport?.failure === undefined) return undefined;
+  return {
+    kind: 'error',
+    reason: 'storage_read',
+    detail: errorDetail(transport.failure),
+  };
+}
+
+async function extractPdfTextTask(
+  task: ReturnType<typeof getDocument>,
+  range?: { startPage: number; maxPages: number; deadlineAt?: number },
+  rangeTransport?: PdfObjectRangeTransport,
+): Promise<PdfTextResult> {
   let document: Awaited<typeof task.promise>;
   try {
     document = await task.promise;
   } catch (error) {
     await task.destroy().catch(() => undefined);
+    await rangeTransport?.waitForRequests();
+    const storageError = rangeReadError(rangeTransport);
+    if (storageError) return storageError;
     const name = error instanceof Error ? error.name : '';
     if (name === 'PasswordException') {
       return { kind: 'error', reason: 'password_protected', detail: errorDetail(error) };
@@ -189,14 +258,63 @@ export async function extractPdfText(
       return { kind: 'unreadable', reason: 'empty_document', pageCount, textLength };
     }
     if (range === undefined && textLength < MIN_PDF_TEXT_CHARS) {
-      // Bản scan: trang có ảnh nhưng không có mảnh văn bản nào.
       return { kind: 'unreadable', reason: 'no_text_layer', pageCount, textLength };
     }
 
     return { kind: 'ok', title, pageCount, pages, textLength };
   } catch (error) {
+    const storageError = rangeReadError(rangeTransport);
+    if (storageError) return storageError;
     return { kind: 'error', reason: 'extract_failed', detail: errorDetail(error) };
   } finally {
     await task.destroy().catch(() => undefined);
+    await rangeTransport?.waitForRequests();
+  }
+}
+
+export async function extractPdfText(
+  bytes: Uint8Array,
+  range?: { startPage: number; maxPages: number; deadlineAt?: number },
+): Promise<PdfTextResult> {
+  const task = getDocument({
+    data: bytes,
+    // Không tải font hay ảnh: chỉ đọc lớp văn bản, mà function không có DOM để dựng font.
+    disableFontFace: true,
+    useSystemFonts: false,
+    // 0 = chỉ log lỗi: pdf.js cảnh báo thiếu `standardFontDataUrl` khi không render, không hữu ích ở đây.
+    verbosity: 0,
+  });
+
+  return extractPdfTextTask(task, range);
+}
+
+export async function extractPdfTextFromRanges(
+  source: PdfByteRangeSource,
+  range?: { startPage: number; maxPages: number; deadlineAt?: number },
+): Promise<PdfTextResult> {
+  if (!Number.isSafeInteger(source.length) || source.length <= 0) {
+    return { kind: 'error', reason: 'invalid_pdf', detail: 'Invalid PDF object size' };
+  }
+
+  const transport = new PdfObjectRangeTransport(source);
+  const task = getDocument({
+    range: transport,
+    rangeChunkSize: PDF_READ_RANGE_BYTES,
+    disableStream: true,
+    disableAutoFetch: true,
+    disableFontFace: true,
+    useSystemFonts: false,
+    verbosity: 0,
+  });
+  try {
+    return await Promise.race([extractPdfTextTask(task, range, transport), transport.failed]);
+  } catch (error) {
+    await task.destroy().catch(() => undefined);
+    await transport.waitForRequests();
+    return {
+      kind: 'error',
+      reason: 'storage_read',
+      detail: errorDetail(transport.failure ?? error),
+    };
   }
 }

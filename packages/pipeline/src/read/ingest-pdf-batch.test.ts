@@ -9,6 +9,109 @@ import { describe, expect, it } from 'vitest';
 import { ingestPdfBatch } from './ingest-pdf-batch';
 
 describe('PDF jobs', () => {
+  it('reads large PDFs by byte range and writes combined Markdown as chunks with source metrics', async () => {
+    const pageJob: ClaimedPdfJob = {
+      id: 'job-large',
+      idemKey: 'ingest:pdf:large',
+      leaseOwner: 'worker-1',
+      payload: {
+        documentId: 'doc-large',
+        storageKey: 'large.pdf',
+        contentType: 'application/pdf',
+        bytes: 32 * 1024 * 1024,
+      },
+    };
+    const pdfSource = {
+      length: 32 * 1024 * 1024,
+      async readRange() {
+        throw new Error('The PDF range extractor is injected in this test');
+      },
+    };
+    const storedObjects = new Map<string, string>();
+    let ready: Record<string, unknown> | undefined;
+    let openedSource = false;
+    let maxPages = 0;
+    const jobs: PdfJobStore = {
+      async claim() {
+        return null;
+      },
+      async finish() {
+        return true;
+      },
+    };
+    const documents: DocumentStore = {
+      async markReady(input) {
+        ready = { ...input };
+      },
+      async markUnreadable() {
+        throw new Error('Unexpected unreadable PDF');
+      },
+      async markFailed() {
+        throw new Error('Unexpected PDF failure');
+      },
+    };
+
+    const outcome = await ingestPdfBatch({
+      job: pageJob,
+      jobs,
+      documents,
+      openObject: async () => {
+        openedSource = true;
+        return pdfSource;
+      },
+      extractRanges: async (_source, range) => {
+        maxPages = range.maxPages;
+        return {
+          kind: 'ok',
+          pageCount: 1,
+          pages: [
+            {
+              pageNumber: 1,
+              lines: [
+                {
+                  text: 'Contract terms provide a sufficiently long readable test fixture.',
+                  fontSize: 11,
+                  y: 700,
+                },
+              ],
+            },
+          ],
+          textLength: 64,
+        };
+      },
+      writeObject: async (key, value) => {
+        storedObjects.set(key, value);
+      },
+      readObjectChunks: async function* (key) {
+        const bytes = new TextEncoder().encode(storedObjects.get(key) ?? '');
+        yield bytes.subarray(0, 10);
+        yield bytes.subarray(10);
+      },
+      writeObjectChunks: async (key, chunks) => {
+        const decoded: string[] = [];
+        let bytes = 0;
+        for await (const chunk of chunks) {
+          bytes += chunk.byteLength;
+          decoded.push(new TextDecoder().decode(chunk));
+        }
+        storedObjects.set(key, decoded.join(''));
+        return bytes;
+      },
+    });
+
+    expect(outcome).toBe('ready');
+    expect(openedSource).toBe(true);
+    expect(maxPages).toBe(1);
+    expect(storedObjects.get('large.pdf.md')).toContain('<!-- page: 1 -->');
+    expect(ready).toBeDefined();
+    const saved = ready as Record<string, unknown>;
+    expect(saved.bytes).toBe(
+      new TextEncoder().encode(storedObjects.get('large.pdf.md')).byteLength,
+    );
+    expect(saved.meta).toMatchObject({ sourceBytes: 32 * 1024 * 1024, pageCount: 1 });
+    expect((saved.meta as { readMs: number }).readMs).toBeGreaterThanOrEqual(0);
+  });
+
   it('ingests a PDF larger than 4.5 MB across three page jobs and resumes from saved progress', async () => {
     const fixture = readFileSync(new URL('./__fixtures__/contract-3-pages.pdf', import.meta.url));
     const largePdf = new Uint8Array(5 * 1024 * 1024);
