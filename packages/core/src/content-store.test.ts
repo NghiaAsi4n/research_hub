@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createContentStore } from './content-store';
 import type { Db } from './db/client';
 import { createIngestStore } from './ingest-store';
+import { createReaderStore } from './reader-store';
 
 const pg = new PGlite();
 const hash = 'a'.repeat(64);
@@ -25,6 +26,7 @@ beforeAll(async () => {
   await pg.exec(
     readFileSync(new URL('../drizzle/0002_content_sources.sql', import.meta.url), 'utf8'),
   );
+  await pg.exec(readFileSync(new URL('../drizzle/0003_reader_state.sql', import.meta.url), 'utf8'));
 }, 20_000);
 afterAll(() => pg.close());
 
@@ -128,4 +130,31 @@ describe('canonical content on PostgreSQL', () => {
     expect((await pg.query('select hash from documents')).rows).toEqual([{ hash }]);
   });
 
+  it('persists position and highlights across store instances and isolates accounts', async () => {
+    const db = drizzle(pg) as unknown as Db;
+    const first = createReaderStore(db);
+    const documentId = ids[2] as string;
+    await first.saveProgress(documentId, 'reader-a', { section: 'section-25', ratio: 0.5 });
+    const highlight = await first.addHighlight(documentId, 'reader-a', {
+      startOffset: 4,
+      endOffset: 9,
+      quote: 'hello',
+    });
+    const again = await first.addHighlight(documentId, 'reader-a', {
+      startOffset: 4,
+      endOffset: 9,
+      quote: 'hello',
+    });
+    expect(again.id).toBe(highlight.id);
+    const reopened = await createReaderStore(db).get(ids[3] as string, 'reader-a');
+    expect(reopened?.id).toBe(documentId);
+    expect(reopened?.progress).toEqual({ section: 'section-25', ratio: 0.5 });
+    expect(reopened?.highlights).toEqual([highlight]);
+    expect((await first.get(documentId, 'reader-b'))?.highlights).toEqual([]);
+    expect((await first.get(documentId, 'reader-b'))?.progress).toBeNull();
+    await first.removeHighlight(documentId, 'reader-b', highlight.id);
+    expect((await first.get(documentId, 'reader-a'))?.highlights).toHaveLength(1);
+    await first.removeHighlight(documentId, 'reader-a', highlight.id);
+    expect((await first.get(documentId, 'reader-a'))?.highlights).toEqual([]);
+  });
 });

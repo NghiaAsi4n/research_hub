@@ -124,10 +124,11 @@ describe('allowlist', () => {
 });
 
 describe('cấu hình dùng chung', () => {
-  it('ngưỡng hạn mức khai một chỗ cho cả hai route', () => {
+  it('ngưỡng hạn mức khai một chỗ cho các route', () => {
     expect(GUARD_LIMITS).toEqual({
       embed: { limit: 20, windowMs: 60_000 },
       ingest: { limit: 30, windowMs: 60_000 },
+      reader: { limit: 120, windowMs: 60_000 },
     });
   });
 

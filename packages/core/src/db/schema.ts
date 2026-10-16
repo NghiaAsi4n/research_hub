@@ -89,6 +89,43 @@ export const documentAliases = pgTable('document_aliases', {
     .references(() => documents.id, { onDelete: 'cascade' }),
 });
 
+export const readingProgress = pgTable(
+  'reading_progress',
+  {
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull(),
+    section: text('section'),
+    ratio: real('ratio').notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('reading_progress_user_document_idx').on(table.userId, table.documentId)],
+);
+
+export const highlights = pgTable(
+  'highlights',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull(),
+    startOffset: integer('start_offset').notNull(),
+    endOffset: integer('end_offset').notNull(),
+    quote: text('quote').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('highlights_user_range_idx').on(
+      table.userId,
+      table.documentId,
+      table.startOffset,
+      table.endOffset,
+    ),
+  ],
+);
+
 export const chunks = pgTable(
   'chunks',
   {

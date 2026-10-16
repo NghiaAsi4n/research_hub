@@ -16,7 +16,9 @@
     "./ingest-job-store": "./src/ingest-job-store.ts",
     "./document-store": "./src/document-store.ts",
     "./content-store": "./src/content-store.ts",
-    "./content-hash": "./src/content-hash.ts"
+    "./content-hash": "./src/content-hash.ts",
+    "./reader": "./src/reader.ts",
+    "./reader-store": "./src/reader-store.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

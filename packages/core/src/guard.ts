@@ -4,12 +4,13 @@
 // Phần quyết định nằm ở core để test được mà không cần Next.js; việc đếm hạn mức và ghi log do
 // lớp gọi truyền vào (xem `apps/web/src/lib/guard.ts`).
 
-export type GuardRoute = 'embed' | 'ingest';
+export type GuardRoute = 'embed' | 'ingest' | 'reader';
 
 // Ngưỡng khai một chỗ: đổi ở đây là mọi route theo ngay, không phải sửa từng route.
 export const GUARD_LIMITS: Record<GuardRoute, { limit: number; windowMs: number }> = {
   embed: { limit: 20, windowMs: 60_000 },
   ingest: { limit: 30, windowMs: 60_000 },
+  reader: { limit: 120, windowMs: 60_000 },
 };
 
 // Chỉ model nhúng cục bộ đã pull ở Giai đoạn 0 mới được gọi ở route `/api/embed`.
