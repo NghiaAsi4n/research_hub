@@ -19,6 +19,10 @@ const {
 }));
 
 vi.mock('./guard', () => ({ guardRequest: guardMock }));
+vi.mock('@research-hub/core/content-store', () => ({
+  createContentStore: () => ({ findBySource: async () => null }),
+}));
+vi.mock('./url-ingest', () => ({ ingestUrl: vi.fn(async () => Response.json({ state: 'done' })) }));
 vi.mock('@research-hub/core/storage', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@research-hub/core/storage')>();
   return {
@@ -43,6 +47,7 @@ import {
   createIngestHandler,
   createMultipartHandler,
 } from './ingest-handler';
+import { ingestUrl } from './url-ingest';
 
 type StoredDocument = DocumentUpsert & { id: string; bytes: number | null };
 type StoredJob = JobUpsert & { id: string };
@@ -255,20 +260,21 @@ describe('POST /api/ingest', () => {
     expect(presignMock.mock.calls[1]?.[0]).toBe(first.key);
   });
 
-  it('nguồn là URL thì job sẵn sàng ngay và không ký URL', async () => {
-    const { store, jobs } = memoryStore();
+  it('routes a normalized URL to content ingestion without signing an upload', async () => {
+    const { store } = memoryStore();
     const response = await createIngestHandler(store)(
       ingestRequest({ sourceUrl: 'https://example.com/bai-viet?utm_source=fb' }),
     );
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.state).toBe('queued');
+    expect(body.state).toBe('done');
     expect(body.uploadUrl).toBeUndefined();
     expect(presignMock).not.toHaveBeenCalled();
-    expect(jobs.get([...jobs.keys()][0] as string)?.payload).toMatchObject({
-      url: 'https://example.com/bai-viet',
-    });
+    expect(ingestUrl).toHaveBeenCalledWith(
+      { kind: 'url', value: 'https://example.com/bai-viet', domain: 'example.com' },
+      'user-1',
+    );
   });
 
   it('trả 400 cho dữ liệu vào sai và không ghi gì', async () => {

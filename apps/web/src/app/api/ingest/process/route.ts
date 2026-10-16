@@ -1,4 +1,4 @@
-import { createDocumentStore } from '@research-hub/core/document-store';
+import { createDeduplicatingDocumentStore } from '@research-hub/core/content-store';
 import { getEnv } from '@research-hub/core/env';
 import { createPdfJobStore } from '@research-hub/core/ingest-job-store';
 import { ingestPdfBatch } from '@research-hub/pipeline/ingest-pdf-batch';
@@ -13,6 +13,10 @@ export async function POST(request: Request): Promise<Response> {
   const jobs = createPdfJobStore();
   const job = await jobs.claim();
   if (!job) return Response.json({ state: 'idle' });
-  const outcome = await ingestPdfBatch({ job, jobs, documents: createDocumentStore() });
+  const outcome = await ingestPdfBatch({
+    job,
+    jobs,
+    documents: createDeduplicatingDocumentStore(),
+  });
   return Response.json({ jobId: job.id, outcome });
 }

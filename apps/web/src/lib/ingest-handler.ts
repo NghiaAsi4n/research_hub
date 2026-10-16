@@ -1,3 +1,4 @@
+import { createContentStore } from '@research-hub/core/content-store';
 import {
   documentHash,
   ingestIdemKey,
@@ -23,6 +24,7 @@ import {
   uploadPartCount,
 } from '@research-hub/core/storage';
 import { guardRequest } from './guard';
+import { ingestUrl } from './url-ingest';
 
 // Hai route của đường ingest (Giai đoạn 1, T3):
 //
@@ -53,6 +55,7 @@ export function createIngestHandler(store: IngestStore) {
     }
 
     const target = parsed.target;
+    if (target.kind === 'url') return ingestUrl(target, guard.subject);
     const bytes = body.bytes;
     if (
       target.kind === 'file' &&
@@ -60,6 +63,16 @@ export function createIngestHandler(store: IngestStore) {
       (typeof bytes !== 'number' || uploadPartCount(bytes) === null)
     ) {
       return Response.json({ error: 'invalid_bytes', maxBytes: MAX_UPLOAD_BYTES }, { status: 400 });
+    }
+    const content = createContentStore();
+    const existing = await content.findBySource(sourceId(target));
+    if (existing?.status === 'ready') {
+      return Response.json({
+        documentId: existing.id,
+        state: 'done',
+        duplicate: true,
+        sources: await content.sources(existing.id),
+      });
     }
     const hash = documentHash(target);
     const idemKey = ingestIdemKey(target);
@@ -73,7 +86,7 @@ export function createIngestHandler(store: IngestStore) {
       id: sourceId(target),
       kind: target.kind,
       url: target.value,
-      domain: target.kind === 'url' ? target.domain : null,
+      domain: null,
     });
 
     // Ghi DB trước khi ký URL: nếu bước ký hỏng (thiếu credential), lần gọi sau vẫn dùng lại đúng
@@ -94,7 +107,7 @@ export function createIngestHandler(store: IngestStore) {
         sourceId: source.id,
         documentId: document.id,
         storageKey: document.storageKey,
-        url: target.kind === 'url' ? target.value : null,
+        url: null,
         contentType: target.kind === 'file' ? target.contentType : null,
         subject: guard.subject,
       },

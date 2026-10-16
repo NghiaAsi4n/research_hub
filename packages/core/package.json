@@ -14,7 +14,9 @@
     "./ingest": "./src/ingest.ts",
     "./ingest-store": "./src/ingest-store.ts",
     "./ingest-job-store": "./src/ingest-job-store.ts",
-    "./document-store": "./src/document-store.ts"
+    "./document-store": "./src/document-store.ts",
+    "./content-store": "./src/content-store.ts",
+    "./content-hash": "./src/content-hash.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -29,6 +31,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "@types/node": "^26.6.5",
     "vitest": "^5.0.3"
   }

@@ -1,9 +1,9 @@
-import { createDocumentStore } from '@research-hub/core/document-store';
+import { createDeduplicatingDocumentStore } from '@research-hub/core/content-store';
 import { createPdfJobStore } from '@research-hub/core/ingest-job-store';
 import { ingestPdfBatch } from './read/ingest-pdf-batch';
 
 const jobs = createPdfJobStore();
-const documents = createDocumentStore();
+const documents = createDeduplicatingDocumentStore();
 
 async function main() {
   let processed = 0;

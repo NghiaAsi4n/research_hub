@@ -67,6 +67,28 @@ export const documents = pgTable(
   (table) => [uniqueIndex('documents_hash_idx').on(table.hash)],
 );
 
+// A canonical document can be discovered through several URLs or uploads.
+export const documentSources = pgTable(
+  'document_sources',
+  {
+    documentId: uuid('document_id')
+      .notNull()
+      .references(() => documents.id, { onDelete: 'cascade' }),
+    sourceId: uuid('source_id')
+      .notNull()
+      .references(() => sources.id, { onDelete: 'cascade' }),
+  },
+  (table) => [uniqueIndex('document_sources_idx').on(table.documentId, table.sourceId)],
+);
+
+// Keep links returned before a PDF finished deduplicating resolvable.
+export const documentAliases = pgTable('document_aliases', {
+  id: uuid('id').primaryKey(),
+  documentId: uuid('document_id')
+    .notNull()
+    .references(() => documents.id, { onDelete: 'cascade' }),
+});
+
 export const chunks = pgTable(
   'chunks',
   {

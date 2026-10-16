@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./ingest-pdf-batch": "./src/read/ingest-pdf-batch.ts"
+    "./ingest-pdf-batch": "./src/read/ingest-pdf-batch.ts",
+    "./read-html": "./src/read/read-html.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
