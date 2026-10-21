@@ -1,5 +1,5 @@
 import { isSignUpRequest } from '@research-hub/core/auth';
-import { getAuth } from '@/lib/auth/server';
+import { getAuth } from '../../../../lib/auth/server';
 
 // Chuyển tiếp mọi lời gọi auth sang Managed Better Auth qua `auth.handler()`, nhưng chặn luồng
 // đăng ký: plan chốt đăng ký đóng, chỉ một tài khoản chủ (mục 2 và ranh giới 6).
@@ -9,12 +9,12 @@ type Ctx = { params: Promise<{ all: string[] }> };
 type NeonCtx = { params: Promise<{ path: string[] }> };
 
 async function handle(request: Request, ctx: Ctx, method: 'GET' | 'POST') {
-  if (isSignUpRequest(new URL(request.url).pathname)) {
+  const { all } = await ctx.params;
+  if (isSignUpRequest(`/${all.join('/')}`)) {
     return Response.json({ error: 'sign_up_disabled' }, { status: 403 });
   }
-  return getAuth()
-    .handler()
-    [method](request, ctx as unknown as NeonCtx);
+  const neonContext: NeonCtx = { params: Promise.resolve({ path: all }) };
+  return getAuth().handler()[method](request, neonContext);
 }
 
 export const GET = (request: Request, ctx: Ctx) => handle(request, ctx, 'GET');
