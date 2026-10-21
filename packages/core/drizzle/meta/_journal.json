@@ -29,6 +29,13 @@
       "when": 1792080325759,
       "tag": "0003_reader_state",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792454395987,
+      "tag": "0004_backfill_hash",
+      "breakpoints": true
     }
   ]
 }
