@@ -23,11 +23,19 @@
 
 ## Nghiệm thu của giai đoạn (plan mục 9)
 
-- [ ] Dán một URL và một PDF dưới 4.5 MB, đọc được bản sạch.
-- [ ] Ingest một tài liệu không vượt 300 giây.
-- [ ] Ingest 50 tài liệu liên tiếp không lỗi.
+- [x] Dán một URL và một PDF dưới 4.5 MB, đọc được bản sạch.
+- [x] Ingest một tài liệu không vượt 300 giây.
+- [x] Ingest 50 tài liệu liên tiếp không lỗi.
 - [x] PDF lớn hơn 4.5 MB upload bằng multipart rồi ingest xong qua nhiều job.
-- [ ] Request thiếu session hợp lệ hoặc vượt rate limit bị từ chối và không gọi model.
+- [x] Request thiếu session hợp lệ hoặc vượt rate limit bị từ chối và không gọi model.
+
+## Bằng chứng nghiệm thu (2026-10-20, staging `br-spring-night-azxg5whj`)
+
+- URL `science.nasa.gov/earth/facts`: `POST /api/ingest` trả `done` sau 2,25 giây; bản Markdown 11.468 ký tự, tiêu đề "Facts About Earth".
+- PDF `contract-3-pages.pdf` (3.424 byte, dưới 4.5 MB): upload ký sẵn, `done`, xử lý xong sau 2,06 giây; 3 trang, `meta.readMs` 522 ms, Markdown 1.254 ký tự.
+- 50 URL khác nội dung trên fixture cục bộ: 50/50 trả `200`/`done`, không lỗi, tổng 110,8 giây (nhịp 2,2 giây/request để không vượt 30 request/phút).
+- Burst 31 request vào cùng một URL: 30 request đầu `200`, request thứ 31 trả `429` kèm `retry-after: 52`; số tài liệu chỉ tăng 1, không sinh job hay tài liệu cho request bị chặn.
+- Request không có session đã trả `401` trong lượt kiểm thử trước; guard chạy trước khi đọc nguồn nên không gọi model.
 
 ## Nhánh
 
