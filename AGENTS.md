@@ -6,7 +6,7 @@
 
 1. Chỉ xử lý ticket Jira mà người dùng yêu cầu; không tự chọn ticket khác để làm tiếp.
 2. Lấy ticket từ Jira, đọc mô tả, tiêu chí nghiệm thu, bình luận và các liên kết liên quan. Khi bắt đầu xử lý, chuyển ticket sang `In Progress`. Nếu không truy cập được ticket hoặc không thể đổi trạng thái, báo rõ và không giả vờ đã hoàn tất thao tác.
-3. Đọc `README.md`, README của phase, checklist hiện có và các tài liệu liên quan. Xác nhận phụ thuộc đã hoàn tất, phase tương ứng và nhánh hiện tại đúng (`phase-<số>`); không làm trực tiếp trên `main`. Khi một phase đã hoàn thành nghiệm thu thì đẩy nhánh phase lên remote rồi merge vào `main` (người dùng đã cho phép thường trực bước này) trước khi sang phase kế tiếp.
+3. Đọc `README.md`, README của phase, checklist hiện có và các tài liệu liên quan. Xác nhận phụ thuộc đã hoàn tất, phase tương ứng và nhánh hiện tại đúng (`phase-<số>`); không làm trực tiếp trên `main`. Xong một ticket là push commit lên nhánh phase rồi merge ngay commit đó vào `main` (người dùng cho phép thường trực), không đợi hết phase.
 4. Chia ticket thành các mục checklist nhỏ, độc lập, có thể kiểm chứng; ghi trong file checklist Markdown hiện có của ticket hoặc tạo file theo quy ước của phase. Không thay đổi checklist của ticket khác.
 5. Kiểm tra `git status` và diff trước khi chỉnh sửa. Giữ nguyên thay đổi có sẵn ngoài phạm vi; không ghi đè hoặc hoàn tác chúng.
 6. Nếu thiếu quyền truy cập, phụ thuộc, hoặc quyết định sản phẩm cần thiết, nêu đúng điểm bị chặn thay vì giả định.
@@ -42,5 +42,5 @@
 2. Nếu người dùng yêu cầu chỉnh sửa khi review, thực hiện trong phạm vi ticket, chạy lại kiểm chứng liên quan, cập nhật checklist/Jira cho khớp và dừng chờ review lại.
 3. Tuyệt đối không commit hoặc push nếu chưa có sự cho phép rõ ràng của người dùng. Chỉ sau khi được cho phép commit, stage đúng các file thuộc ticket đã được review; kiểm tra staged diff để loại thay đổi ngoài phạm vi, secret và artifact sinh tự động. Dùng commit message tiếng Anh, mô tả đúng một thay đổi logic.
 4. Sau commit, báo mã commit và chờ xác nhận riêng cho việc push. Cho phép commit không đồng nghĩa với cho phép push.
-5. Chỉ push commit đã được duyệt lên remote của nhánh phase tương ứng sau khi có xác nhận push rõ ràng. Không force-push. Việc merge nhánh phase đã nghiệm thu vào `main` là bước bắt buộc cuối mỗi phase, không cần hỏi lại.
+5. Chỉ push commit đã được duyệt lên remote của nhánh phase tương ứng sau khi có xác nhận push rõ ràng. Không force-push. Việc merge ngay commit của từng ticket đã xong vào `main` là bước bắt buộc, không cần hỏi lại.
 6. Chỉ sau khi commit và push đều thành công, chuyển ticket Jira sang `Done` và cập nhật bình luận cuối cùng với commit, kết quả kiểm chứng và phần còn tồn tại (nếu có). Nếu commit hoặc push thất bại, hoặc chưa được phép thực hiện, giữ ticket chưa `Done` và báo chính xác trạng thái.
