@@ -13,6 +13,7 @@ Cập nhật file này sau mỗi mục checklist đã hoàn tất và kiểm ch�
   - T5: `packages/core/src/eval-citations.ts` (chấm điểm + harness) và `gold-questions.ts` (30 câu, 6 tài liệu), 9 test.
   - T6: `packages/core/src/reindex.ts` (job `reindex:<model>`, lease 240 giây, chạy theo lô), 4 test PGlite.
 - Kiểm chứng tại working copy: `packages/core` 117 test đạt/7 bỏ qua, `apps/web` 37 đạt, `packages/pipeline` 33 đạt/4 bỏ qua; `tsc --noEmit` core và web sạch; Biome sạch.
-- Chưa làm được (cần môi trường thật): gọi Ollama Cloud với `qwen3-embedding`/`gemma4:31b`, áp migration `0005` lên Neon staging, đo tỉ lệ trích dẫn đúng và token đầu tiên dưới 5 giây. Nhánh vector chưa test được cục bộ vì PGlite không có pgvector.
+- Đã áp migration `0005` lên Neon staging (database `neondb`, project `research-hub-phase1-staging`, cấu hình trong `apps/web/.env.local`): hàm `rh_unaccent` chạy đúng, chỉ mục GIN và HNSW đã có. Test live `packages/core/src/search.live.test.ts` đạt 3/3 trên staging (khớp không dấu, xếp hạng cosine, hợp nhất RRF) — chạy khi đặt `SEARCH_LIVE=1` cùng `DATABASE_URL`.
+- Chưa làm được: gọi model thật. `OLLAMA_API_KEY` hiện có trả `401` ở `https://ollama.com/api/embed`, còn Ollama cục bộ `127.0.0.1:11434` không truy cập được từ môi trường này. Vì vậy chưa đo được tỉ lệ trích dẫn đúng (ngưỡng 80%) và token đầu tiên dưới 5 giây.
 - Jira: `RH-23` đã có bình luận hoàn tất; `RH-1`, `RH-23` và các ticket T2–T6 chưa chuyển `Done` vì chưa commit/push hoặc thiếu công cụ đổi trạng thái.
 - Bước tiếp theo: chờ duyệt commit/push cho T2–T6; sau đó chạy thử live trên staging (áp `0005`, ingest 6 tài liệu mẫu, đo bộ câu hỏi vàng).

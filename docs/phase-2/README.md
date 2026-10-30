@@ -32,14 +32,14 @@ Ba mục trên cần chạy với model và dữ liệu thật nên chưa tick: 
 |---|---|---|
 | T1 | xong (`ee790f1`) | chưa cần |
 | T2 | xong | chưa chạy với Ollama Cloud |
-| T3 | xong (trừ nhánh vector chưa test được cục bộ) | chưa áp migration 0005 |
+| T3 | xong | đã áp migration 0005, test live 3/3 |
 | T4 | xong (route + UI + test) | chưa gọi model thật |
 | T5 | harness + 30 câu hỏi xong | chưa đo tỉ lệ thật |
 | T6 | xong (test PGlite) | chưa chạy trên staging |
 
 ## Kiểm chứng tại revision hiện tại
 
-- `packages/core`: 120 test đạt, 7 bỏ qua.
+- `packages/core`: 120 test đạt, 10 bỏ qua (gồm test live chỉ chạy khi có `DATABASE_URL`).
 - `apps/web`: 37 test đạt.
 - `packages/pipeline`: 33 test đạt, 4 bỏ qua.
 - `tsc --noEmit` cho `packages/core` và `apps/web` sạch; Biome sạch trên mã và tài liệu của phase.
