@@ -1,7 +1,8 @@
 import { getDb } from '@research-hub/core/db/client';
 import { createOllamaEmbedder, DEFAULT_EMBED_MODEL } from '@research-hub/core/embed';
-import { getEnv, isLocalOllamaEndpoint, resolveOllamaBaseUrl } from '@research-hub/core/env';
+import { getEnv } from '@research-hub/core/env';
 import { indexDocument, listUnindexedDocumentIds } from '@research-hub/core/index-document';
+import { ollamaConfig } from '@/lib/ollama';
 
 // Chia chunk và sinh vector cho tài liệu đã `ready` (Giai đoạn 2, T1 + T2).
 //
@@ -12,13 +13,8 @@ import { indexDocument, listUnindexedDocumentIds } from '@research-hub/core/inde
 export const maxDuration = 300;
 
 function embedder() {
-  const endpoint = resolveOllamaBaseUrl(process.env.OLLAMA_BASE_URL);
-  const apiKey = process.env.OLLAMA_API_KEY?.trim();
-  return createOllamaEmbedder({
-    baseUrl: endpoint,
-    apiKey: isLocalOllamaEndpoint(endpoint) ? undefined : apiKey,
-    model: DEFAULT_EMBED_MODEL,
-  });
+  const { endpoint, apiKey } = ollamaConfig();
+  return createOllamaEmbedder({ baseUrl: endpoint, apiKey, model: DEFAULT_EMBED_MODEL });
 }
 
 export async function POST(request: Request): Promise<Response> {

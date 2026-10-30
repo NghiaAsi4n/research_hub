@@ -101,20 +101,33 @@ export async function searchFullText(input: {
 }): Promise<RankedItem[]> {
   const db = input.db ?? getDb();
   const candidates = Math.max(1, input.candidates ?? 40);
+  // Câu hỏi tự nhiên hiếm khi chứa đủ mọi từ của một đoạn, nên truy vấn nối các từ bằng OR rồi
+  // để `ts_rank` xếp hạng; nếu dùng AND mặc định của `plainto_tsquery` thì gần như không khớp.
+  const orQuery = toOrQuery(input.query);
+  if (!orQuery) return [];
   const result = await db.execute(sql`
     select c.id, c.document_id, d.title, c.ord, c.text,
       ts_rank(
         to_tsvector('simple', rh_unaccent(c.text)),
-        plainto_tsquery('simple', rh_unaccent(${input.query}))
+        to_tsquery('simple', rh_unaccent(${orQuery}))
       ) as score
     from chunks c
     join documents d on d.id = c.document_id
     where to_tsvector('simple', rh_unaccent(c.text))
-      @@ plainto_tsquery('simple', rh_unaccent(${input.query}))
+      @@ to_tsquery('simple', rh_unaccent(${orQuery}))
     order by score desc, c.ord asc
     limit ${candidates}
   `);
   return toRanked(result.rows as unknown as Row[]);
+}
+
+// Chuyển câu hỏi thành truy vấn OR an toàn cho `to_tsquery`: chỉ giữ chữ và số.
+export function toOrQuery(query: string): string {
+  const terms = query
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((term) => term.length > 0);
+  return terms.join(' | ');
 }
 
 export async function searchVector(input: {

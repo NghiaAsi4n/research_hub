@@ -1,8 +1,8 @@
 import { CHAT_MODEL, type ChatMessage } from '@research-hub/core/chat';
 import { createOllamaEmbedder, DEFAULT_EMBED_MODEL } from '@research-hub/core/embed';
-import { isLocalOllamaEndpoint, resolveOllamaBaseUrl } from '@research-hub/core/env';
 import { hybridSearch } from '@research-hub/core/search';
 import { createChatHandler } from '@/lib/chat-handler';
+import { ollamaConfig } from '@/lib/ollama';
 
 // Chat streaming có trích dẫn (Giai đoạn 2, T4).
 //
@@ -11,32 +11,24 @@ import { createChatHandler } from '@/lib/chat-handler';
 
 export const maxDuration = 60;
 
-function ollamaRequest(): { endpoint: string; headers: Record<string, string> } {
-  const endpoint = resolveOllamaBaseUrl(process.env.OLLAMA_BASE_URL);
+function requestHeaders(apiKey: string | undefined): Record<string, string> {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
-  const apiKey = process.env.OLLAMA_API_KEY?.trim();
-  if (!isLocalOllamaEndpoint(endpoint) && apiKey) {
-    headers.authorization = `Bearer ${apiKey}`;
-  }
-  return { endpoint, headers };
+  if (apiKey) headers.authorization = `Bearer ${apiKey}`;
+  return headers;
 }
 
 const handler = createChatHandler({
   async search(question) {
-    const { endpoint, headers } = ollamaRequest();
-    const embed = createOllamaEmbedder({
-      baseUrl: endpoint,
-      apiKey: headers.authorization?.replace(/^Bearer\s+/i, ''),
-      model: DEFAULT_EMBED_MODEL,
-    });
+    const { endpoint, apiKey } = ollamaConfig();
+    const embed = createOllamaEmbedder({ baseUrl: endpoint, apiKey, model: DEFAULT_EMBED_MODEL });
     return hybridSearch({ query: question, embed, limit: 6 });
   },
 
   async stream(messages: ChatMessage[]) {
-    const { endpoint, headers } = ollamaRequest();
+    const { endpoint, apiKey } = ollamaConfig();
     const response = await fetch(`${endpoint}/api/chat`, {
       method: 'POST',
-      headers,
+      headers: requestHeaders(apiKey),
       body: JSON.stringify({ model: CHAT_MODEL, messages, stream: true }),
     });
     if (!response.ok || !response.body) {

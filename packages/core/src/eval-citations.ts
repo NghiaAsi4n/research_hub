@@ -41,7 +41,10 @@ export function scoreAnswer(
   for (const citation of citations) {
     const hit = hits[citation.index - 1];
     if (!hit) continue;
-    if (hit.documentTitle === question.documentTitle && hit.text.includes(question.contains)) {
+    // So khớp không phân biệt hoa thường: đoạn kỳ vọng lấy nguyên văn nhưng có thể nằm giữa câu.
+    const haystack = hit.text.toLowerCase();
+    const needle = question.contains.toLowerCase();
+    if (hit.documentTitle === question.documentTitle && haystack.includes(needle)) {
       return {
         id: question.id,
         question: question.question,

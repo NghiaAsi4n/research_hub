@@ -12,6 +12,46 @@ export const REFUSAL_TEXT = 'Không đủ bằng chứng trong tài liệu để
 
 export type ChatMessage = { role: 'system' | 'user'; content: string };
 
+/** Trả về câu trả lời trọn vẹn cho một lượt hỏi (không streaming). */
+export type ChatCompleter = (messages: ChatMessage[]) => Promise<string>;
+
+// Gọi `/api/chat` của Ollama ở chế độ không streaming: dùng cho đánh giá và lệnh chạy nền.
+export function createOllamaChat(input: {
+  baseUrl: string;
+  apiKey?: string;
+  model?: string;
+  fetchImpl?: typeof fetch;
+}): ChatCompleter {
+  const model = input.model ?? CHAT_MODEL;
+  const endpoint = `${input.baseUrl.replace(/\/+$/, '')}/api/chat`;
+  const fetchImpl = input.fetchImpl ?? fetch;
+
+  return async (messages) => {
+    const headers: Record<string, string> = { 'content-type': 'application/json' };
+    const apiKey = input.apiKey?.trim();
+    if (apiKey) headers.authorization = `Bearer ${apiKey}`;
+
+    let response: Response;
+    try {
+      response = await fetchImpl(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ model, messages, stream: false }),
+      });
+    } catch (error) {
+      throw new Error(`ollama_unreachable: ${(error as Error).message}`);
+    }
+
+    if (!response.ok) throw new Error(`chat_failed: HTTP ${response.status}`);
+    const payload = (await response.json().catch(() => null)) as {
+      message?: { content?: unknown };
+    } | null;
+    const content = payload?.message?.content;
+    if (typeof content !== 'string') throw new Error('chat_invalid_response');
+    return content;
+  };
+}
+
 export type Citation = {
   index: number;
   chunkId: string;

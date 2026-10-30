@@ -99,6 +99,21 @@ describe('searchFullText', () => {
 
     expect(await searchFullText({ db, query: 'chứng khoán' })).toEqual([]);
   });
+
+  it('finds the answer passage for a natural question with extra words', async () => {
+    const db = drizzle(pg) as unknown as Db;
+    await seed('Hợp đồng thuê nhà ở', [
+      'Các bên thỏa thuận thời hạn thuê là 12 tháng kể từ ngày bàn giao nhà.',
+    ]);
+
+    const hits = await searchFullText({
+      db,
+      query: 'Thời hạn thuê nhà trong hợp đồng là bao lâu?',
+    });
+
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.text).toContain('12 tháng');
+  });
 });
 
 function item(chunkId: string, ord = 0): RankedItem {
