@@ -2,7 +2,7 @@ import { and, asc, eq, gte, sql } from 'drizzle-orm';
 import type { TextChunk } from './chunk';
 import type { Db } from './db/client';
 import { getDb } from './db/client';
-import { chunks } from './db/schema';
+import { chunks, documents } from './db/schema';
 
 // Ghi chunk của một tài liệu (Giai đoạn 2, T1).
 //
@@ -21,6 +21,35 @@ export type ChunkStore = {
   replace(documentId: string, items: TextChunk[]): Promise<number>;
   list(documentId: string): Promise<StoredChunk[]>;
 };
+
+export type ChunkWithDocument = {
+  chunkId: string;
+  documentId: string;
+  documentTitle: string;
+  ord: number;
+  text: string;
+};
+
+// Đọc một chunk kèm tài liệu chứa nó: chat dùng để mở đúng đoạn nguồn khi bấm trích dẫn.
+export async function getChunkWithDocument(input: {
+  id: string;
+  db?: Db;
+}): Promise<ChunkWithDocument | null> {
+  const db = input.db ?? getDb();
+  const [row] = await db
+    .select({
+      chunkId: chunks.id,
+      documentId: chunks.documentId,
+      documentTitle: documents.title,
+      ord: chunks.ord,
+      text: chunks.text,
+    })
+    .from(chunks)
+    .innerJoin(documents, eq(documents.id, chunks.documentId))
+    .where(eq(chunks.id, input.id))
+    .limit(1);
+  return row ?? null;
+}
 
 export function createChunkStore(db?: Db): ChunkStore {
   const handle = (): Db => (db ??= getDb());
@@ -44,8 +73,9 @@ export function createChunkStore(db?: Db): ChunkStore {
             set: {
               text: sql`excluded."text"`,
               tokenCount: sql`excluded."token_count"`,
-              // Nội dung đổi thì vector cũ không còn đúng; T2 sinh lại.
-              embedModel: null,
+              // Nội dung đổi thì vector cũ không còn đúng; T2 sinh lại. Nội dung giữ nguyên thì
+              // giữ `embed_model` để lần chạy lại không phải nhúng lại từ đầu.
+              embedModel: sql`case when ${chunks.text} is distinct from excluded."text" then null else ${chunks.embedModel} end`,
             },
           });
         await handleDb

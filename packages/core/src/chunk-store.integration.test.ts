@@ -106,7 +106,7 @@ describe('chunk store', () => {
     expect(await store.list(documentId)).toEqual([]);
   });
 
-  it('clears the stale embed model when chunk text changes', async () => {
+  it('clears the stale embed model only for chunks whose text changed', async () => {
     const db = drizzle(pg) as unknown as Db;
     const store = createChunkStore(db);
     const documentId = await seedDocument();
@@ -114,6 +114,7 @@ describe('chunk store', () => {
     await pg.query("update chunks set embed_model = 'qwen3-embedding' where document_id = $1", [
       documentId,
     ]);
+    const before = await store.list(documentId);
 
     const changed = chunkMarkdown(`${markdown}\n\nĐiều khoản bổ sung về phạt vi phạm.`, {
       maxChars: 200,
@@ -121,8 +122,14 @@ describe('chunk store', () => {
     });
     await store.replace(documentId, changed);
 
-    const stored = await store.list(documentId);
-    expect(stored.every((chunk) => chunk.embedModel === null)).toBe(true);
+    const after = await store.list(documentId);
+    const previousByOrd = new Map(before.map((chunk) => [chunk.ord, chunk.text]));
+    const kept = after.filter((chunk) => previousByOrd.get(chunk.ord) === chunk.text);
+    const touched = after.filter((chunk) => previousByOrd.get(chunk.ord) !== chunk.text);
+
+    expect(kept.length).toBeGreaterThan(0);
+    expect(kept.every((chunk) => chunk.embedModel === 'qwen3-embedding')).toBe(true);
+    expect(touched.every((chunk) => chunk.embedModel === null)).toBe(true);
   });
 
   it('removes chunks together with their document', async () => {

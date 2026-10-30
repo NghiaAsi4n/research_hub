@@ -36,6 +36,13 @@
       "when": 1792454395987,
       "tag": "0004_backfill_hash",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792886400000,
+      "tag": "0005_search_indexes",
+      "breakpoints": true
     }
   ]
 }

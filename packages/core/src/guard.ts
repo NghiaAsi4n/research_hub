@@ -4,17 +4,22 @@
 // Phần quyết định nằm ở core để test được mà không cần Next.js; việc đếm hạn mức và ghi log do
 // lớp gọi truyền vào (xem `apps/web/src/lib/guard.ts`).
 
-export type GuardRoute = 'embed' | 'ingest' | 'reader';
+export type GuardRoute = 'embed' | 'ingest' | 'reader' | 'chat';
 
 // Ngưỡng khai một chỗ: đổi ở đây là mọi route theo ngay, không phải sửa từng route.
 export const GUARD_LIMITS: Record<GuardRoute, { limit: number; windowMs: number }> = {
   embed: { limit: 20, windowMs: 60_000 },
   ingest: { limit: 30, windowMs: 60_000 },
   reader: { limit: 120, windowMs: 60_000 },
+  chat: { limit: 20, windowMs: 60_000 },
 };
 
-// Chỉ model nhúng cục bộ đã pull ở Giai đoạn 0 mới được gọi ở route `/api/embed`.
-export const ALLOWED_EMBED_MODELS = ['bge-m3'] as const;
+// Model nhúng được phép gọi: `bge-m3` chạy ở máy (Giai đoạn 0) và `qwen3-embedding` trên Ollama
+// Cloud (Giai đoạn 2). Đổi model là phải sinh lại vector, nên danh sách này đi kèm `embed_model`.
+export const ALLOWED_EMBED_MODELS = ['bge-m3', 'qwen3-embedding'] as const;
+
+// Model chat được phép gọi ở route `/api/chat`.
+export const ALLOWED_CHAT_MODELS = ['gemma4:31b'] as const;
 
 // Loại nguồn được phép ghi vào Object Storage; khớp với `ALLOWED_KINDS` cũ ở route ingest.
 export const ALLOWED_SOURCE_KINDS = ['documents', 'media'] as const;
@@ -49,6 +54,10 @@ export function isModelAllowed(model: string): boolean {
   return (ALLOWED_EMBED_MODELS as readonly string[]).includes(model);
 }
 
+export function isChatModelAllowed(model: string): boolean {
+  return (ALLOWED_CHAT_MODELS as readonly string[]).includes(model);
+}
+
 export function isSourceKindAllowed(kind: string): boolean {
   return (ALLOWED_SOURCE_KINDS as readonly string[]).includes(kind);
 }
@@ -70,7 +79,11 @@ export function guardQuotaRoute(input: {
     return refuse('unauthorized');
   }
 
-  if (input.model !== undefined && !isModelAllowed(input.model)) {
+  if (
+    input.model !== undefined &&
+    !isModelAllowed(input.model) &&
+    !isChatModelAllowed(input.model)
+  ) {
     return refuse('model_not_allowed');
   }
 

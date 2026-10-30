@@ -111,8 +111,9 @@ describe('guardQuotaRoute', () => {
 
 describe('allowlist', () => {
   it('chỉ cho model nhúng đã pull ở Giai đoạn 0', () => {
-    expect(ALLOWED_EMBED_MODELS).toEqual(['bge-m3']);
+    expect(ALLOWED_EMBED_MODELS).toEqual(['bge-m3', 'qwen3-embedding']);
     expect(isModelAllowed('bge-m3')).toBe(true);
+    expect(isModelAllowed('qwen3-embedding')).toBe(true);
     expect(isModelAllowed('gemma4:31b')).toBe(false);
   });
 
@@ -129,6 +130,7 @@ describe('cấu hình dùng chung', () => {
       embed: { limit: 20, windowMs: 60_000 },
       ingest: { limit: 30, windowMs: 60_000 },
       reader: { limit: 120, windowMs: 60_000 },
+      chat: { limit: 20, windowMs: 60_000 },
     });
   });
 
