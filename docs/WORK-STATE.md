@@ -4,10 +4,15 @@ Cập nhật file này sau mỗi mục checklist đã hoàn tất và kiểm ch�
 
 ## Trạng thái hiện tại
 
-- Phase 1 đã đóng: 9 ticket `RH-2` … `RH-10` chuyển `Done` ngày 2026-10-30 kèm bình luận tổng kết (commit, kiểm chứng, dọn dữ liệu thử). Epic `RH-1` chưa chuyển được `Done` vì công cụ cập nhật trạng thái Jira không còn trong phiên; chỉ cần chuyển trạng thái, không cần sửa nội dung.
-- Nhánh `phase-1` giữ nguyên ở commit `547ef2d` (remote `origin/phase-1` cùng commit). Phase 1 chưa merge vào `main` vì người dùng chưa yêu cầu.
-- Phase 2 đã dựng khung: epic [RH-22](https://nghiaasi4n-1.atlassian.net/browse/RH-22) và 6 ticket `RH-23` … `RH-28`; checklist từng việc nằm trong `docs/phase-2/`, nhánh làm việc `phase-2` tách từ `phase-1`.
-- T1/RH-23 (chunking) đã xong phần mã và test trong working copy, **chưa commit/push**: `packages/core/src/chunk.ts`, `packages/core/src/chunk-store.ts` và hai file test; export `./chunk`, `./chunk-store` đã thêm vào `packages/core/package.json`. Kiểm chứng: 9 test chunk + 4 test PGlite cho store đạt, `tsc --noEmit` của `packages/core` không lỗi.
-- Nghiệm thu Phase 1 (giữ nguyên bằng chứng, staging `br-spring-night-azxg5whj`): URL ingest 2,25 giây; PDF 3.424 byte xong sau 2,06 giây; 50 tài liệu liên tiếp 110,8 giây, không lỗi; request thứ 31 trả `429`; thiếu phiên trả `401`.
-- Production không bị ghi trong suốt Phase 1; `.env.local` ở root vẫn trỏ branch `br-curly-glade-azjguhv7` (project `plain-bird-91045931`).
-- Bước tiếp theo: chờ duyệt commit/push cho T1; sau đó làm T2 (embedding) trên cùng nhánh `phase-2`. Epic `RH-1` cần chuyển `Done` khi công cụ Jira cho phép.
+- Phase 1 đã đóng: 9 ticket `RH-2` … `RH-10` ở `Done`; epic `RH-1` còn `In Progress` vì công cụ đổi trạng thái Jira không có trong phiên. Nhánh `phase-1` ở `547ef2d`, chưa merge vào `main`.
+- Phase 2 (epic `RH-22`, ticket `RH-23` … `RH-28`) làm trên nhánh `phase-2`. T1 (chunking) đã commit `ee790f1` và push lên `origin/phase-2`.
+- T2–T6 đã xong phần mã và test trong working copy, **chưa commit/push**:
+  - T2: `packages/core/src/embed.ts` (gọi Ollama theo lô, kiểm số chiều), `embed-store.ts` (cache theo nội dung chunk, ghi vector bằng một câu lệnh), 10 test.
+  - T3: `packages/core/src/search.ts` (full-text `simple` trên `rh_unaccent`, vector cosine, hợp nhất RRF), migration `0005_search_indexes.sql` (hàm bỏ dấu + chỉ mục GIN và HNSW), 6 test.
+  - T4: `packages/core/src/chat.ts` (prompt buộc marker `[n]`, đọc marker), `apps/web/src/lib/chat-handler.ts` (SSE), route `/api/chat`, route `/api/chunks/[id]`, UI `apps/web/src/components/chat/chat.tsx`, 13 test.
+  - T5: `packages/core/src/eval-citations.ts` (chấm điểm + harness) và `gold-questions.ts` (30 câu, 6 tài liệu), 9 test.
+  - T6: `packages/core/src/reindex.ts` (job `reindex:<model>`, lease 240 giây, chạy theo lô), 4 test PGlite.
+- Kiểm chứng tại working copy: `packages/core` 117 test đạt/7 bỏ qua, `apps/web` 37 đạt, `packages/pipeline` 33 đạt/4 bỏ qua; `tsc --noEmit` core và web sạch; Biome sạch.
+- Chưa làm được (cần môi trường thật): gọi Ollama Cloud với `qwen3-embedding`/`gemma4:31b`, áp migration `0005` lên Neon staging, đo tỉ lệ trích dẫn đúng và token đầu tiên dưới 5 giây. Nhánh vector chưa test được cục bộ vì PGlite không có pgvector.
+- Jira: `RH-23` đã có bình luận hoàn tất; `RH-1`, `RH-23` và các ticket T2–T6 chưa chuyển `Done` vì chưa commit/push hoặc thiếu công cụ đổi trạng thái.
+- Bước tiếp theo: chờ duyệt commit/push cho T2–T6; sau đó chạy thử live trên staging (áp `0005`, ingest 6 tài liệu mẫu, đo bộ câu hỏi vàng).

@@ -7,7 +7,7 @@
 | T1 | Chunking theo cấu trúc tài liệu, overlap có kiểm soát | [RH-23](https://nghiaasi4n-1.atlassian.net/browse/RH-23) | 1 ngày | Giai đoạn 1 |
 | T2 | Sinh embedding `qwen3-embedding` theo batch, cache theo hash chunk | [RH-24](https://nghiaasi4n-1.atlassian.net/browse/RH-24) | 1,5 ngày | T1 |
 | T3 | Tìm kiếm lai full-text `simple`+`unaccent` và vector HNSW, hợp nhất RRF | [RH-25](https://nghiaasi4n-1.atlassian.net/browse/RH-25) | 1,5 ngày | T2 |
-| T4 | Chat streaming qua AI SDK với `citations[]` bấm được | [RH-26](https://nghiaasi4n-1.atlassian.net/browse/RH-26) | 1,5 ngày | T3 |
+| T4 | Chat streaming với `citations[]` bấm được | [RH-26](https://nghiaasi4n-1.atlassian.net/browse/RH-26) | 1,5 ngày | T3 |
 | T5 | Bộ 30 câu hỏi vàng đo độ chính xác trích dẫn | [RH-27](https://nghiaasi4n-1.atlassian.net/browse/RH-27) | 1 ngày | T4 |
 | T6 | Reindex khi đổi model embedding qua `jobs` + lease | [RH-28](https://nghiaasi4n-1.atlassian.net/browse/RH-28) | 1 ngày | T2 |
 
@@ -23,6 +23,26 @@
 - [ ] Từ 80% câu trả lời trở lên có ít nhất một trích dẫn trỏ đúng đoạn nguồn.
 - [ ] Khi hệ thống đã ấm, token đầu tiên về dưới 5 giây.
 - [ ] Lần đầu sau thời gian rảnh: UI hiện trạng thái đang chờ trong lúc chờ đánh thức model.
+
+Ba mục trên cần chạy với model và dữ liệu thật nên chưa tick: phần mã, harness đo và bộ câu hỏi đã xong, nhưng chưa có lượt chạy live trên staging.
+
+## Trạng thái từng việc
+
+| Việc | Mã + test | Đo live |
+|---|---|---|
+| T1 | xong (`ee790f1`) | chưa cần |
+| T2 | xong | chưa chạy với Ollama Cloud |
+| T3 | xong (trừ nhánh vector chưa test được cục bộ) | chưa áp migration 0005 |
+| T4 | xong (route + UI + test) | chưa gọi model thật |
+| T5 | harness + 30 câu hỏi xong | chưa đo tỉ lệ thật |
+| T6 | xong (test PGlite) | chưa chạy trên staging |
+
+## Kiểm chứng tại revision hiện tại
+
+- `packages/core`: 120 test đạt, 7 bỏ qua.
+- `apps/web`: 37 test đạt.
+- `packages/pipeline`: 33 test đạt, 4 bỏ qua.
+- `tsc --noEmit` cho `packages/core` và `apps/web` sạch; Biome sạch trên mã và tài liệu của phase.
 
 ## Nhánh
 

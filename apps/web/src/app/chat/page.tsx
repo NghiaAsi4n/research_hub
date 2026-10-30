@@ -1,12 +1,6 @@
-import { SectionPlaceholder } from '@/components/section-placeholder';
+import { Chat } from '@/components/chat/chat';
 
-// Khung rỗng: nối chunking, tìm kiếm lai và chat trích dẫn ở Giai đoạn 2.
+// Chat trên kho tài liệu đã ingest, câu trả lời kèm trích dẫn bấm được (Giai đoạn 2, T4).
 export default function ChatPage() {
-  return (
-    <SectionPlaceholder
-      title="Hỏi đáp có trích dẫn"
-      note="Tìm lai full-text và vector trên kho tài liệu."
-      phase="Giai đoạn 2 — Chỉ mục và chat có trích dẫn"
-    />
-  );
+  return <Chat />;
 }
