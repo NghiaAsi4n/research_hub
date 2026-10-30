@@ -30,6 +30,7 @@
     "./gold-corpus": "./src/gold-corpus.ts",
     "./gold-seed": "./src/gold-seed.ts",
     "./answer": "./src/answer.ts",
+    "./research": "./src/research.ts",
     "./backfill-hash": "./src/backfill-hash.ts",
     "./reader": "./src/reader.ts",
     "./reader-store": "./src/reader-store.ts"
