@@ -4,15 +4,10 @@ Cập nhật file này sau mỗi mục checklist đã hoàn tất và kiểm ch�
 
 ## Trạng thái hiện tại
 
-- Phase 1: T7/RH-8 (`eb1d267`), T9/RH-10 (`9396074`) và T8/RH-9 (`3a1d36e`) đã push lên `origin/phase-1`. Các thay đổi của lượt nghiệm thu (backfill hash T9, sửa route auth, chứng cứ nghiệm thu phase) đã được người dùng duyệt và commit theo nhóm trong cùng lượt, rồi push lên `origin/phase-1`.
-- Nghiệm thu cấp phase ngày 2026-10-20 trên staging `br-spring-night-azxg5whj` (project `research-hub-phase1-staging`, cấu hình trong `apps/web/.env.local` và `.env.phase1-auth-staging`):
-  - URL `https://science.nasa.gov/earth/facts/`: `POST /api/ingest` trả `done` sau 2,25 giây; Markdown sạch 11.468 ký tự, tiêu đề "Facts About Earth".
-  - PDF `contract-3-pages.pdf` 3.424 byte (dưới 4,5 MB): ký URL, PUT, `done`, xử lý xong sau 2,06 giây; 3 trang, `meta.readMs` 522 ms, Markdown 1.254 ký tự.
-  - 50 URL khác nội dung: 50/50 `200`/`done`, không lỗi, 110,8 giây, nhịp 2,2 giây/request.
-  - Burst 31 request cùng URL: 30 request `200`, request 31 trả `429` với `retry-after: 52`; tài liệu chỉ tăng 1, không sinh job/tài liệu cho request bị chặn.
-  - Request thiếu session trả `401` (đã kiểm thử trước đó); guard chạy trước khi đọc nguồn nên không gọi model.
-- Backfill hash T9: migration `0004_backfill_hash.sql` (hàm `rh_backfill_document_hash`), module `packages/core/src/backfill-hash.ts`, route `POST /api/maintenance/backfill-hash` (bảo vệ `CRON_SECRET`, chạy theo lô, có `dryRun`). Test PGlite 3/3 đạt; test live staging 1/1 đạt: đổi hash nguồn cũ sang hash nội dung, gộp bản trùng, giữ hai nguồn, alias cho ID cũ và payload job. Migration đã áp lên staging; dữ liệu thử và tài khoản thử đã dọn (0 tài liệu, 0 job).
-- Production: `.env.local` ở root trỏ branch `br-curly-glade-azjguhv7` (project `plain-bird-91045931`). Lượt này không ghi gì vào production; tại thời điểm kiểm tra production có 0 dòng `documents` nên không có bản ghi cũ cần backfill.
-- Bộ test đầy đủ tại revision hiện tại: core 64 passed/7 skipped, pipeline 33 passed/4 skipped, web 31 passed; `npm test` exit 0. Kiểm thử live chỉ chạy khi đặt `PHASE1_LIVE_TEST=1` cùng `PHASE1_LIVE_EXPECTED_BRANCH`.
-- Jira RH-9 và RH-10 vẫn `In Progress`; đã thêm bình luận tiến độ/nghiệm thu, chưa chuyển `Done` vì chưa commit/push.
-- Bước tiếp theo: chờ review thay đổi của lượt này; chỉ commit/push sau khi có phê duyệt rõ ràng. Sau khi push, cập nhật checklist remote và chuyển RH-9/RH-10 sang `Done` nếu được duyệt.
+- Phase 1 đã đóng: 9 ticket `RH-2` … `RH-10` chuyển `Done` ngày 2026-10-30 kèm bình luận tổng kết (commit, kiểm chứng, dọn dữ liệu thử). Epic `RH-1` chưa chuyển được `Done` vì công cụ cập nhật trạng thái Jira không còn trong phiên; chỉ cần chuyển trạng thái, không cần sửa nội dung.
+- Nhánh `phase-1` giữ nguyên ở commit `547ef2d` (remote `origin/phase-1` cùng commit). Phase 1 chưa merge vào `main` vì người dùng chưa yêu cầu.
+- Phase 2 đã dựng khung: epic [RH-22](https://nghiaasi4n-1.atlassian.net/browse/RH-22) và 6 ticket `RH-23` … `RH-28`; checklist từng việc nằm trong `docs/phase-2/`, nhánh làm việc `phase-2` tách từ `phase-1`.
+- T1/RH-23 (chunking) đã xong phần mã và test trong working copy, **chưa commit/push**: `packages/core/src/chunk.ts`, `packages/core/src/chunk-store.ts` và hai file test; export `./chunk`, `./chunk-store` đã thêm vào `packages/core/package.json`. Kiểm chứng: 9 test chunk + 4 test PGlite cho store đạt, `tsc --noEmit` của `packages/core` không lỗi.
+- Nghiệm thu Phase 1 (giữ nguyên bằng chứng, staging `br-spring-night-azxg5whj`): URL ingest 2,25 giây; PDF 3.424 byte xong sau 2,06 giây; 50 tài liệu liên tiếp 110,8 giây, không lỗi; request thứ 31 trả `429`; thiếu phiên trả `401`.
+- Production không bị ghi trong suốt Phase 1; `.env.local` ở root vẫn trỏ branch `br-curly-glade-azjguhv7` (project `plain-bird-91045931`).
+- Bước tiếp theo: chờ duyệt commit/push cho T1; sau đó làm T2 (embedding) trên cùng nhánh `phase-2`. Epic `RH-1` cần chuyển `Done` khi công cụ Jira cho phép.
