@@ -38,9 +38,7 @@
 
 ## Review, commit, push và hoàn tất ticket
 
-1. Khi toàn bộ checklist hoàn tất và đã cập nhật checklist/Jira, dừng để người dùng review. Gửi tóm tắt thay đổi, kết quả kiểm chứng, trạng thái Jira và danh sách file thuộc ticket; không stage, commit hoặc push ở bước này.
-2. Nếu người dùng yêu cầu chỉnh sửa khi review, thực hiện trong phạm vi ticket, chạy lại kiểm chứng liên quan, cập nhật checklist/Jira cho khớp và dừng chờ review lại.
-3. Tuyệt đối không commit hoặc push nếu chưa có sự cho phép rõ ràng của người dùng. Chỉ sau khi được cho phép commit, stage đúng các file thuộc ticket đã được review; kiểm tra staged diff để loại thay đổi ngoài phạm vi, secret và artifact sinh tự động. Dùng commit message tiếng Anh, mô tả đúng một thay đổi logic.
-4. Sau commit, báo mã commit và chờ xác nhận riêng cho việc push. Cho phép commit không đồng nghĩa với cho phép push.
-5. Chỉ push commit đã được duyệt lên remote của nhánh phase tương ứng sau khi có xác nhận push rõ ràng. Không force-push. Việc merge ngay commit của từng ticket đã xong vào `main` là bước bắt buộc, không cần hỏi lại.
-6. Chỉ sau khi commit và push đều thành công, chuyển ticket Jira sang `Done` và cập nhật bình luận cuối cùng với commit, kết quả kiểm chứng và phần còn tồn tại (nếu có). Nếu commit hoặc push thất bại, hoặc chưa được phép thực hiện, giữ ticket chưa `Done` và báo chính xác trạng thái.
+1. Khi toàn bộ checklist của một ticket hoàn tất và đã kiểm chứng: stage đúng các file thuộc ticket, xem lại staged diff để loại thay đổi ngoài phạm vi, secret và artifact sinh tự động, rồi commit bằng message tiếng Anh mô tả đúng một thay đổi logic.
+2. Ngay sau commit, push lên nhánh `phase-<số>` của phase đang làm, rồi merge commit đó vào `main` và push `main`. Người dùng đã cho phép thường trực chuỗi commit → push → merge này cho từng ticket trong repo này, không cần hỏi lại.
+3. Không force-push. Không merge khi kiểm chứng của ticket chưa đạt. Nếu push hoặc merge lỗi, giữ ticket chưa `Done` và báo đúng trạng thái thay vì coi như đã xong.
+4. Chỉ chuyển ticket Jira sang `Done` sau khi commit, push và merge đều thành công; thêm bình luận cuối cùng với commit, kết quả kiểm chứng và phần còn tồn tại (nếu có). Nếu người dùng yêu cầu chỉnh sửa sau đó, sửa trong phạm vi ticket, chạy lại kiểm chứng, cập nhật checklist/Jira rồi lặp lại chuỗi trên.
