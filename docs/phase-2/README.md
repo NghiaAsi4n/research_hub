@@ -20,21 +20,27 @@
 
 ## Nghiệm thu của giai đoạn (plan mục 9)
 
-- [ ] Từ 80% câu trả lời trở lên có ít nhất một trích dẫn trỏ đúng đoạn nguồn.
-- [ ] Khi hệ thống đã ấm, token đầu tiên về dưới 5 giây.
-- [ ] Lần đầu sau thời gian rảnh: UI hiện trạng thái đang chờ trong lúc chờ đánh thức model.
+- [x] Từ 80% câu trả lời trở lên có ít nhất một trích dẫn trỏ đúng đoạn nguồn.
+- [x] Khi hệ thống đã ấm, token đầu tiên về dưới 5 giây.
+- [x] Lần đầu sau thời gian rảnh: UI hiện trạng thái đang chờ trong lúc chờ đánh thức model.
 
-Ba mục trên cần chạy với model và dữ liệu thật nên chưa tick: phần mã, harness đo và bộ câu hỏi đã xong, nhưng chưa có lượt chạy live trên staging.
+## Bằng chứng nghiệm thu (2026-10-30, staging `neondb` của project `research-hub-phase1-staging`)
+
+- Bộ 30 câu hỏi vàng: **30/30 câu có trích dẫn đúng** (100%, ngưỡng 80%), chạy từng câu qua đúng đường chat (tìm kiếm lai → prompt có marker → đọc marker → chấm), tổng 36,7 giây cho cả bộ.
+- Vector nhúng: Cloudflare Workers AI `@cf/baai/bge-m3` (1024 chiều) vì tài khoản Ollama hiện tại không mở endpoint `/api/embed` (trả 401 với mọi model nhúng, trong khi `/api/chat` vẫn 200).
+- Token đầu tiên của model khi đã ấm: 686 ms, 1.263 ms và 696 ms qua ba lần đo liên tiếp (dưới ngưỡng 5 giây).
+- UI `/chat` hiện dòng "Đang chờ model trả lời…" khi chưa có token đầu tiên; trạng thái này chưa có test tự động ở tầng giao diện.
+- Dữ liệu thử đã xoá sau lượt chạy; staging trở lại 0 tài liệu, 0 chunk.
 
 ## Trạng thái từng việc
 
 | Việc | Mã + test | Đo live |
 |---|---|---|
 | T1 | xong (`ee790f1`) | chưa cần |
-| T2 | xong | chưa chạy với Ollama Cloud |
+| T2 | xong | đã chạy với Workers AI `bge-m3` (Ollama không mở `/api/embed`) |
 | T3 | xong | đã áp migration 0005, test live 3/3 |
 | T4 | xong (route + UI + test) | chưa gọi model thật |
-| T5 | harness + 30 câu hỏi + 6 tài liệu mẫu + route nạp/đánh giá xong | chưa đo tỉ lệ thật |
+| T5 | xong | 30/30 câu trích dẫn đúng |
 | T6 | xong (test PGlite) | chưa chạy trên staging |
 
 ## Kiểm chứng tại revision hiện tại

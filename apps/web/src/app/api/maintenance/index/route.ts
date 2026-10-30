@@ -1,8 +1,7 @@
 import { getDb } from '@research-hub/core/db/client';
-import { createOllamaEmbedder, DEFAULT_EMBED_MODEL } from '@research-hub/core/embed';
 import { getEnv } from '@research-hub/core/env';
 import { indexDocument, listUnindexedDocumentIds } from '@research-hub/core/index-document';
-import { ollamaConfig } from '@/lib/ollama';
+import { createEmbedder } from '@/lib/embedder';
 
 // Chia chunk và sinh vector cho tài liệu đã `ready` (Giai đoạn 2, T1 + T2).
 //
@@ -11,11 +10,6 @@ import { ollamaConfig } from '@/lib/ollama';
 // lý lô tài liệu chưa có chunk.
 
 export const maxDuration = 300;
-
-function embedder() {
-  const { endpoint, apiKey } = ollamaConfig();
-  return createOllamaEmbedder({ baseUrl: endpoint, apiKey, model: DEFAULT_EMBED_MODEL });
-}
 
 export async function POST(request: Request): Promise<Response> {
   const secret = getEnv().CRON_SECRET;
@@ -31,10 +25,10 @@ export async function POST(request: Request): Promise<Response> {
   const db = getDb();
   const targets = documentId ? [documentId] : await listUnindexedDocumentIds({ db, limit });
 
-  const embed = embedder();
+  const { embed, model } = createEmbedder();
   const reports = [];
   for (const id of targets) {
-    reports.push(await indexDocument({ documentId: id, embed, db }));
+    reports.push(await indexDocument({ documentId: id, embed, model, db }));
   }
 
   return Response.json({ processed: reports.length, reports });

@@ -1,10 +1,10 @@
 import { answerQuestion } from '@research-hub/core/answer';
 import { createOllamaChat } from '@research-hub/core/chat';
 import { getDb } from '@research-hub/core/db/client';
-import { createOllamaEmbedder, DEFAULT_EMBED_MODEL } from '@research-hub/core/embed';
 import { getEnv } from '@research-hub/core/env';
 import { type EvalQuestion, evaluateCitations } from '@research-hub/core/eval-citations';
 import { GOLD_QUESTIONS } from '@research-hub/core/gold-questions';
+import { createEmbedder } from '@/lib/embedder';
 import { ollamaConfig } from '@/lib/ollama';
 
 // Chạy bộ 30 câu hỏi vàng và trả tỉ lệ trích dẫn đúng (Giai đoạn 2, T5).
@@ -28,7 +28,7 @@ export async function POST(request: Request): Promise<Response> {
       : GOLD_QUESTIONS;
 
   const { endpoint, apiKey } = ollamaConfig();
-  const embed = createOllamaEmbedder({ baseUrl: endpoint, apiKey, model: DEFAULT_EMBED_MODEL });
+  const { embed } = createEmbedder();
   const chat = createOllamaChat({ baseUrl: endpoint, apiKey });
 
   try {

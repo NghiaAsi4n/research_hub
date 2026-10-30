@@ -1,7 +1,7 @@
 import { CHAT_MODEL, type ChatMessage } from '@research-hub/core/chat';
-import { createOllamaEmbedder, DEFAULT_EMBED_MODEL } from '@research-hub/core/embed';
 import { hybridSearch } from '@research-hub/core/search';
 import { createChatHandler } from '@/lib/chat-handler';
+import { createEmbedder } from '@/lib/embedder';
 import { ollamaConfig } from '@/lib/ollama';
 
 // Chat streaming có trích dẫn (Giai đoạn 2, T4).
@@ -19,8 +19,7 @@ function requestHeaders(apiKey: string | undefined): Record<string, string> {
 
 const handler = createChatHandler({
   async search(question) {
-    const { endpoint, apiKey } = ollamaConfig();
-    const embed = createOllamaEmbedder({ baseUrl: endpoint, apiKey, model: DEFAULT_EMBED_MODEL });
+    const { embed } = createEmbedder();
     return hybridSearch({ query: question, embed, limit: 6 });
   },
 

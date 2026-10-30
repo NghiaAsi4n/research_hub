@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   assertEmbeddingDim,
+  CLOUDFLARE_EMBED_MODEL,
   chunkTextHash,
+  createCloudflareEmbedder,
   createOllamaEmbedder,
   DEFAULT_EMBED_MODEL,
   EmbedError,
@@ -127,6 +129,48 @@ describe('embedInBatches', () => {
     await expect(
       embedInBatches({ texts: ['a', 'b'], embed: async () => [[1]], batchSize: 2 }),
     ).rejects.toThrow(/embed_batch_mismatch/);
+  });
+});
+
+describe('createCloudflareEmbedder', () => {
+  it('sends the texts and returns the model vectors', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({
+        result: {
+          data: [
+            [0.1, 0.2],
+            [0.3, 0.4],
+          ],
+        },
+      }),
+    );
+    const embed = createCloudflareEmbedder({
+      accountId: 'acc',
+      apiToken: 'token',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    const vectors = await embed(['một', 'hai']);
+
+    expect(vectors).toEqual([
+      [0.1, 0.2],
+      [0.3, 0.4],
+    ]);
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toContain(`/accounts/acc/ai/run/${CLOUDFLARE_EMBED_MODEL}`);
+    expect((init.headers as Record<string, string>).authorization).toBe('Bearer token');
+    expect(JSON.parse(init.body as string)).toEqual({ text: ['một', 'hai'] });
+  });
+
+  it('reports the upstream status when Workers AI refuses', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ errors: [] }, 403));
+    const embed = createCloudflareEmbedder({
+      accountId: 'acc',
+      apiToken: 'token',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    await expect(embed(['x'])).rejects.toMatchObject({ name: 'EmbedError', status: 403 });
   });
 });
 

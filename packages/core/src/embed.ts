@@ -66,6 +66,56 @@ export function createOllamaEmbedder(input: {
   };
 }
 
+// Workers AI của Cloudflare: dùng khi tài khoản Ollama không mở endpoint `/api/embed`.
+// `@cf/baai/bge-m3` trả 1024 chiều, khớp cột `chunks.embedding` và `EMBED_DIM` mặc định.
+export const CLOUDFLARE_EMBED_MODEL = '@cf/baai/bge-m3';
+
+export function createCloudflareEmbedder(input: {
+  accountId: string;
+  apiToken: string;
+  model?: string;
+  fetchImpl?: typeof fetch;
+}): Embedder {
+  const model = input.model ?? CLOUDFLARE_EMBED_MODEL;
+  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${input.accountId}/ai/run/${model}`;
+  const fetchImpl = input.fetchImpl ?? fetch;
+
+  return async (texts) => {
+    if (texts.length === 0) return [];
+    let response: Response;
+    try {
+      response = await fetchImpl(endpoint, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${input.apiToken}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ text: texts }),
+      });
+    } catch (error) {
+      throw new EmbedError(`cloudflare_unreachable: ${(error as Error).message}`);
+    }
+
+    if (!response.ok) {
+      throw new EmbedError(`embed_failed: HTTP ${response.status}`, response.status);
+    }
+
+    const payload = (await response.json().catch(() => null)) as {
+      result?: { data?: unknown };
+    } | null;
+    const vectors = payload?.result?.data;
+    if (!Array.isArray(vectors) || vectors.length !== texts.length) {
+      throw new EmbedError('embed_invalid_response');
+    }
+    for (const vector of vectors) {
+      if (!Array.isArray(vector) || vector.some((value) => typeof value !== 'number')) {
+        throw new EmbedError('embed_invalid_vector');
+      }
+    }
+    return vectors as number[][];
+  };
+}
+
 export async function embedInBatches(input: {
   texts: string[];
   embed: Embedder;
