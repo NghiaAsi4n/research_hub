@@ -29,7 +29,7 @@
 - Bộ 30 câu hỏi vàng: **30/30 câu có trích dẫn đúng** (100%, ngưỡng 80%), chạy từng câu qua đúng đường chat (tìm kiếm lai → prompt có marker → đọc marker → chấm), tổng 36,7 giây cho cả bộ.
 - Vector nhúng: Cloudflare Workers AI `@cf/baai/bge-m3` (1024 chiều) vì tài khoản Ollama hiện tại không mở endpoint `/api/embed` (trả 401 với mọi model nhúng, trong khi `/api/chat` vẫn 200).
 - Token đầu tiên của model khi đã ấm: 686 ms, 1.263 ms và 696 ms qua ba lần đo liên tiếp (dưới ngưỡng 5 giây).
-- UI `/chat` hiện dòng "Đang chờ model trả lời…" khi chưa có token đầu tiên; trạng thái này chưa có test tự động ở tầng giao diện.
+- UI `/chat` hiện dòng "Đang chờ model trả lời…" khi chưa có token đầu tiên, đã có test giao diện tự động (`apps/web/browser-tests/chat.spec.tsx`) kiểm trạng thái chờ, câu trả lời hiện dần và bấm trích dẫn mở đúng đoạn nguồn.
 - Dữ liệu thử đã xoá sau lượt chạy; staging trở lại 0 tài liệu, 0 chunk.
 
 ## Trạng thái từng việc
