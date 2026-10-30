@@ -26,9 +26,9 @@
 
 ## Cập nhật checklist và Jira
 
-1. Sau mỗi mục checklist đã xác minh, cập nhật file Markdown tương ứng. Trong lúc triển khai, ticket Jira giữ trạng thái `In Progress`; có thể thêm bình luận tiến độ nhưng không chuyển `Done`.
-2. Khi toàn bộ checklist hoàn tất, xác nhận file checklist và Jira phản ánh đúng thay đổi, kiểm chứng, giới hạn và các mục còn tồn tại. Thêm bình luận tổng kết vào ticket; giữ trạng thái `In Progress` trong lúc chờ review và chờ quyền commit/push.
-3. Nếu còn mục chưa hoàn tất hoặc bị chặn, giữ ticket ở trạng thái phù hợp (thường là `In Progress`) và ghi rõ phần còn lại; không chuyển sang `Done`.
+1. Cập nhật Jira tự động ở mọi bước, không hỏi lại: bắt đầu ticket là chuyển `In Progress`; sau mỗi mục checklist hoặc bước thực hiện thì thêm bình luận tiến độ ngắn (việc đã xong, kiểm chứng, file liên quan) và giữ trạng thái đúng với thực tế; hoàn tất ticket thì chuyển `Done` ngay sau khi commit, push và merge thành công.
+2. Bình luận Jira phải phản ánh đúng bằng chứng đã có, không ghi hoàn tất khi kiểm chứng chưa đạt; nếu còn mục bị chặn thì giữ trạng thái phù hợp và ghi rõ phần còn lại.
+3. Nếu công cụ Jira không cho đổi trạng thái trong phiên, báo rõ ngay khi phát hiện (kèm ticket cụ thể), vẫn thêm bình luận và ghi việc chuyển trạng thái vào `docs/WORK-STATE.md` để phiên sau làm tiếp; không giả vờ đã đổi và không bỏ qua bước này.
 
 ## Bàn giao trạng thái giữa các phiên
 
