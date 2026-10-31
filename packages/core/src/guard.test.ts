@@ -135,6 +135,7 @@ describe('cấu hình dùng chung', () => {
       notes: { limit: 120, windowMs: 60_000 },
       watchlist: { limit: 30, windowMs: 60_000 },
       search: { limit: 120, windowMs: 60_000 },
+      graph: { limit: 60, windowMs: 60_000 },
       export: { limit: 30, windowMs: 60_000 },
     });
   });

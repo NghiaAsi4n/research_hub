@@ -38,5 +38,7 @@ export const config = {
     '/notes/:path*',
     '/watchlist/:path*',
     '/read/:path*',
+    '/search/:path*',
+    '/graph/:path*',
   ],
 };

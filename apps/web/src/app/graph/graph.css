@@ -1,0 +1,11 @@
+.graph-svg {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--muted);
+  border-radius: 0.5rem;
+}
+
+.graph-legend {
+  color: var(--muted);
+  font-size: 0.9rem;
+}

@@ -38,6 +38,8 @@
     "./watchlist-store": "./src/watchlist-store.ts",
     "./backup": "./src/backup.ts",
     "./export-doc": "./src/export-doc.ts",
+    "./global-search": "./src/global-search.ts",
+    "./document-graph": "./src/document-graph.ts",
     "./ollama-queue": "./src/ollama-queue.ts",
     "./backfill-hash": "./src/backfill-hash.ts",
     "./reader": "./src/reader.ts",

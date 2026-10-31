@@ -13,6 +13,7 @@ export type GuardRoute =
   | 'notes'
   | 'watchlist'
   | 'search'
+  | 'graph'
   | 'export';
 
 // Ngưỡng khai một chỗ: đổi ở đây là mọi route theo ngay, không phải sửa từng route.
@@ -25,6 +26,7 @@ export const GUARD_LIMITS: Record<GuardRoute, { limit: number; windowMs: number 
   notes: { limit: 120, windowMs: 60_000 },
   watchlist: { limit: 30, windowMs: 60_000 },
   search: { limit: 120, windowMs: 60_000 },
+  graph: { limit: 60, windowMs: 60_000 },
   export: { limit: 30, windowMs: 60_000 },
 };
 

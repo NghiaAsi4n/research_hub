@@ -9,8 +9,9 @@ Cập nhật file này sau mỗi mục checklist đã hoàn tất và kiểm ch�
 - T1/RH-37 đã xong (commit `1e34734`): migration `0009_phase4_notes_watchlist` (notes.tags, notes.updated_at, notifications.payload/read_at, watchlist_snapshots) áp lên Neon staging; store ghi chú, API `/api/notes`, trang `/notes`, nút lưu trích dẫn trong chat.
 - T2/RH-38 đã xong (commit `dcd5806`): watchlist store, cron so diff, chuông trong app + Telegram (tuỳ chọn), trang `/watchlist`. Live với trang luật trên luatvietnam.vn phát hiện thay đổi và ghi `changes` + thông báo.
 - T3/RH-39 đã xong (commit `b395368`): export 19 bảng nghiệp vụ (bỏ settings, quotes, bảng hàng đợi, vector nhúng), gzip lên `backups/<ngày>.json.gz`, cron `/api/cron/backup`, lệnh `backup:export`/`backup:restore`. Đã export staging, tạo branch Neon thử, restore đủ 10 bản ghi mẫu rồi xoá branch và object thử.
-- T4/RH-40 đã xong: xuất Markdown/PDF/DOCX từ ghi chú và báo cáo research, route `/api/export/[kind]/[id]`, trang chỉ-đọc `/read/[kind]/[id]`. PDF nhúng Noto Sans; build production đạt.
+- T4/RH-40 đã xong (commit `fd75d5d`): xuất Markdown/PDF/DOCX từ ghi chú và báo cáo research, route `/api/export/[kind]/[id]`, trang chỉ-đọc `/read/[kind]/[id]`. PDF nhúng Noto Sans; build production đạt.
+- T5/RH-41 đã xong: tìm kiếm toàn cục ba loại, API `/api/search`, trang `/search`; đồ thị quan hệ tài liệu, API `/api/graph`, trang `/graph`. Live trên staging trả đủ 3 loại kết quả và đồ thị 3 nút/2 cạnh.
 - Kiểm chứng hiện tại: core 185 đạt/13 bỏ qua, web 49 đạt/1 bỏ qua, typecheck ba workspace sạch, Biome sạch trên file Phase 4.
 - Lưu ý lint: `pnpm lint` toàn repo còn báo lỗi có sẵn ở `apps/web/src/lib/research-deps.ts` (useOptionalChain) và `research-deps.test.ts` (format), không thuộc Phase 4.
-- Bước tiếp theo: T5/RH-41 — tìm kiếm toàn cục và đồ thị quan hệ tài liệu.
+- Bước tiếp theo: không còn ticket Phase 4 đang mở; chờ người dùng xác nhận nghiệm thu giai đoạn.
 - Lưu ý bảo mật: Next.js 16.4.0 báo phiên bản có lỗ hổng đã biết; cân nhắc `next upgrade --agent=security` trong worktree riêng khi người dùng đồng ý.

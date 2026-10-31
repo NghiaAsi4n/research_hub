@@ -4,6 +4,8 @@ const SECTIONS = [
   { href: '/research', label: 'Deep research', note: 'Báo cáo nhiều nguồn' },
   { href: '/notes', label: 'Ghi chú', note: 'Liên kết hai chiều' },
   { href: '/watchlist', label: 'Theo dõi thay đổi', note: 'Cron hằng ngày' },
+  { href: '/search', label: 'Tìm kiếm toàn cục', note: 'Tài liệu, ghi chú, đoạn văn' },
+  { href: '/graph', label: 'Đồ thị quan hệ', note: 'Nguồn chung và liên kết ghi chú' },
 ];
 
 // Trang chủ của Giai đoạn 0: khung rỗng cho năm mục chính, chưa nối dữ liệu.
