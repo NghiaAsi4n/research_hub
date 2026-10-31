@@ -1,0 +1,20 @@
+.watchlist-form {
+  display: grid;
+  gap: 0.4rem;
+  margin-block: 1rem;
+}
+
+.watchlist-form input,
+.watchlist-form textarea {
+  width: 100%;
+  font: inherit;
+  padding: 0.45rem;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid var(--muted);
+  border-radius: 0.35rem;
+}
+
+.watchlist-form button {
+  justify-self: start;
+}

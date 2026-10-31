@@ -29,6 +29,9 @@ const optionalShape = {
   SLACK_WEBHOOK_URL: optionalText(),
   RESEND_API_KEY: optionalText(),
   SSI_API_KEY: optionalText(),
+  // Kênh Telegram của watchlist (Giai đoạn 4). Thiếu thì bỏ qua kênh này.
+  TELEGRAM_BOT_TOKEN: optionalText(),
+  TELEGRAM_CHAT_ID: optionalText(),
 };
 
 // Object Storage của Neon: `neon link` đẩy credential vào .env.local theo tên chuẩn AWS,

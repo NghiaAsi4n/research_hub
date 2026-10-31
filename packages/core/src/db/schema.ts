@@ -307,7 +307,7 @@ export const notifications = pgTable(
     // in_app | telegram | slack | email
     channel: text('channel').notNull(),
     payloadDigest: text('payload_digest').notNull(),
-    payload: jsonb('payload'),
+    payload: jsonb('payload').$type<Record<string, unknown>>(),
     readAt: timestamp('read_at', { withTimezone: true }),
     sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -336,7 +336,14 @@ export const changes = pgTable('changes', {
   watchlistId: uuid('watchlist_id')
     .notNull()
     .references(() => watchlist.id, { onDelete: 'cascade' }),
-  diff: jsonb('diff'),
+  diff: jsonb('diff').$type<{
+    url?: string;
+    title?: string;
+    added?: string[];
+    removed?: string[];
+    addedCount?: number;
+    removedCount?: number;
+  }>(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

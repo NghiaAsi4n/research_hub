@@ -1,4 +1,8 @@
 import { getEnv } from '@research-hub/core/env';
+import { createWatchlistStore } from '@research-hub/core/watchlist-store';
+import { readHtml } from '@research-hub/pipeline/read-html';
+import { sendTelegramMessage } from '@/lib/telegram';
+import { runWatchlistCheck } from '@/lib/watchlist-run';
 
 // Cron của Vercel chỉ chạy được một lần mỗi ngày trên gói Hobby, nên cả ba việc định kỳ dùng
 // chung một họ route và phân biệt bằng đoạn đường dẫn (plan mục 4 và mục 13.1).
@@ -26,8 +30,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ job:
     return Response.json({ error: 'unknown_job', job }, { status: 404 });
   }
 
-  // Giai đoạn 0 dừng ở đây: xác thực đúng, còn phần việc thật thuộc Giai đoạn 4 (watchlist,
-  // backup) và Giai đoạn 6 (briefing). Trả 501 để không ai tưởng việc đã chạy.
+  if (job === 'watchlist') {
+    const summary = await runWatchlistCheck({
+      store: createWatchlistStore(),
+      read: async (url) => {
+        const article = await readHtml(url);
+        if (article.kind !== 'ok') return { ok: false, reason: article.reason };
+        return { ok: true, title: article.title, text: article.markdown };
+      },
+      notifyTelegram: sendTelegramMessage,
+    });
+    return Response.json({ job, status: 'ok', ...summary });
+  }
+
+  // Backup nối ở T3; briefing thuộc Giai đoạn 6. Trả 501 để không ai tưởng việc đã chạy.
   return Response.json(
     { job, status: 'not_implemented', phase: job === 'briefing' ? 6 : 4 },
     { status: 501 },
