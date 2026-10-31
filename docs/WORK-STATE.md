@@ -4,11 +4,11 @@ Cập nhật file này sau mỗi mục checklist đã hoàn tất và kiểm ch�
 
 ## Trạng thái hiện tại
 
-- Phase 1, Phase 2 và code Phase 3 đã nằm trên `main`/`phase-3`; Phase 2 đóng ở `70e783d`, T1 Phase 3 là `cd5d43d` (merge `846a7fe`).
-- Phase 3: mã và test cho RH-31–RH-35 đã commit `c4bdd50`, push lên `origin/phase-3` và merge vào `main` tại `2e80774`. Các file chính: `research.ts`, `research-store.ts`, `research-report.ts`, `ollama-queue.ts`, `apps/web/src/lib/research-deps.ts`, `apps/web/src/app/api/research/`.
-- Đã bổ sung migration `0006_research_run_owner`, `0007_shared_ollama_queue`, `0008_ollama_queue_fairness`; đã áp thành công lên Neon staging bằng `pnpm db:migrate`.
-- Kiểm chứng tự động: core 169 đạt/13 bỏ qua, web 42 đạt, pipeline 33 đạt/4 bỏ qua; typecheck core + web sạch; Biome sạch; `next build` biên dịch và typecheck xong nhưng dừng ở cảnh báo bảo mật của Next.js.
-- Nghiệm thu live chưa chạy: `OLLAMA_BASE_URL` trống, Ollama cục bộ không truy cập được, Ollama Cloud trả `401`; Cloudflare thiếu `CLOUDFLARE_ACCOUNT_ID`. DuckDuckGo trả `200` nên phần tìm kiếm web sẵn sàng.
-- Jira: RH-31–RH-35 và RH-30 đã `Done`; epic RH-29 giữ `In Progress` vì còn nghiệm thu live của cả phase.
-- Bước tiếp theo: cấu hình endpoint model còn hiệu lực, chạy thử `/api/research` với câu hỏi thật, xác nhận báo cáo 5+ nguồn và không phát sinh chi phí; sau đó đóng epic RH-29.
+- Phase 1, Phase 2 và Phase 3 đã nằm trên `main`/`phase-3`; Phase 2 đóng ở `70e783d`, T1 Phase 3 là `cd5d43d` (merge `846a7fe`).
+- Phase 3: mã RH-31–RH-35 ở `c4bdd50`, bản sửa từ nghiệm thu live ở `fe422c4`; cả hai đã push lên `origin/phase-3` và merge vào `main`.
+- Migration `0006_research_run_owner`, `0007_shared_ollama_queue`, `0008_ollama_queue_fairness` đã áp lên Neon staging.
+- Kiểm chứng tự động: core 173 đạt/13 bỏ qua, web 45 đạt, pipeline 33 đạt/4 bỏ qua; typecheck ba workspace và Biome sạch.
+- Nghiệm thu live đạt với Ollama cục bộ `qwen2.5:3b`: câu hỏi về thành lập doanh nghiệp tư nhân trả `done` sau 12 bước, 8 nguồn (6 nguồn có trích đoạn), 13.247 token, 12 đơn vị, không cảnh báo hạn mức; báo cáo có đủ kết luận, bằng chứng và nguồn. Dữ liệu run thử đã xoá.
+- Máy có Ollama tại `C:\Users\Nghia\AppData\Local\Programs\Ollama\ollama.exe`; cổng mặc định `11434` nằm trong dải Windows giữ `11370–11469`, nên chạy bằng `OLLAMA_HOST=127.0.0.1:11500` và đặt `OLLAMA_BASE_URL=http://127.0.0.1:11500`, `CHAT_MODEL=qwen2.5:3b`.
+- Jira: RH-29 và RH-30–RH-35 đều `Done`.
 - Lưu ý bảo mật: Next.js 16.4.0 báo phiên bản có lỗ hổng đã biết; cần cân nhắc chạy `next upgrade --agent=security` trong worktree riêng khi người dùng đồng ý.
