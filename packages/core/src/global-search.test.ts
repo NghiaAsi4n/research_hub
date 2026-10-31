@@ -40,7 +40,7 @@ beforeEach(async () => {
 describe('tìm kiếm toàn cục', () => {
   it('escape ký tự đại diện và cắt đoạn quanh từ khoá', () => {
     expect(escapeLike('100%_x')).toBe('100\\%\\_x');
-    const snippet = snippetAround('mở đầu '.repeat(20) + 'điều kiện thành lập', 'thành lập', 40);
+    const snippet = snippetAround(`${'mở đầu '.repeat(20)}điều kiện thành lập`, 'thành lập', 40);
     expect(snippet).toContain('thành lập');
     expect(snippet.startsWith('…')).toBe(true);
   });
