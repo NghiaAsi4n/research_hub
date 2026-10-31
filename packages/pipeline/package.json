@@ -11,12 +11,15 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "local": "node src/local.ts"
+    "local": "node src/local.ts",
+    "backup:export": "tsx src/backup/export.ts",
+    "backup:restore": "tsx src/backup/restore.ts"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
     "@research-hub/core": "workspace:*",
     "@types/turndown": "^5.0.6",
+    "drizzle-orm": "^0.45.4",
     "linkedom": "^0.18.13",
     "pdfjs-dist": "^6.4.299",
     "turndown": "^7.2.4",
@@ -24,6 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
     "vitest": "^5.0.3"
   }
 }

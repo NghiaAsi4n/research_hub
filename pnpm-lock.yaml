@@ -119,6 +119,9 @@ importers:
       '@types/turndown':
         specifier: ^5.0.6
         version: 5.0.6
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@electric-sql/pglite@0.5.10)(@neondatabase/serverless@1.2.0)(kysely@0.29.6)
       linkedom:
         specifier: ^0.18.13
         version: 0.18.13
@@ -135,6 +138,9 @@ importers:
       '@types/node':
         specifier: ^26.6.5
         version: 26.6.5
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
       vitest:
         specifier: ^5.0.3
         version: 5.0.3(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))

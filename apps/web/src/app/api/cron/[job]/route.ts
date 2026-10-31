@@ -1,6 +1,7 @@
 import { getEnv } from '@research-hub/core/env';
 import { createWatchlistStore } from '@research-hub/core/watchlist-store';
 import { readHtml } from '@research-hub/pipeline/read-html';
+import { createBackup } from '@/lib/backup-run';
 import { sendTelegramMessage } from '@/lib/telegram';
 import { runWatchlistCheck } from '@/lib/watchlist-run';
 
@@ -43,9 +44,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ job:
     return Response.json({ job, status: 'ok', ...summary });
   }
 
-  // Backup nối ở T3; briefing thuộc Giai đoạn 6. Trả 501 để không ai tưởng việc đã chạy.
-  return Response.json(
-    { job, status: 'not_implemented', phase: job === 'briefing' ? 6 : 4 },
-    { status: 501 },
-  );
+  if (job === 'backup') {
+    const result = await createBackup();
+    return Response.json({ job, status: 'ok', ...result });
+  }
+
+  // Briefing thuộc Giai đoạn 6. Trả 501 để không ai tưởng việc đã chạy.
+  return Response.json({ job, status: 'not_implemented', phase: 6 }, { status: 501 });
 }
