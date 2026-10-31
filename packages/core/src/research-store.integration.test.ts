@@ -478,3 +478,20 @@ describe('research run leases and step idempotency', () => {
     expect(result.state.report).toBe(state.report);
   });
 });
+
+describe('bảo vệ run_steps', () => {
+  it('không ghi bước có chứa khoá bí mật', async () => {
+    const created = await createResearchRun({ question: 'hỏi', db });
+    const deps: ResearchDeps = {
+      plan: async () => ['query'],
+      search: async () => [{ url: 'https://example.com/source', title: 'Nguồn' }],
+      read: async () => ({ excerpt: 'lộ sk-abcdefghijklmnopqrstuvwxyz0123456789' }),
+      reflect: async () => ({ notes: ['xong'], queries: [], done: true }),
+      synthesize: async () => 'Báo cáo',
+    };
+
+    await expect(
+      runResearchTurnWithLease({ runId: created.id, deps, db, maxStepsPerTurn: 5 }),
+    ).rejects.toThrow(/run_steps/);
+  });
+});

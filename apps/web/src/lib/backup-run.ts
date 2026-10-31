@@ -6,6 +6,7 @@ import {
   serializeBackup,
 } from '@research-hub/core/backup';
 import { type Db, getDb } from '@research-hub/core/db/client';
+import { assertNoSecrets } from '@research-hub/core/secrets';
 import { putObject } from '@research-hub/core/storage';
 
 export type BackupResult = {
@@ -24,7 +25,9 @@ export async function createBackup(
 ): Promise<BackupResult> {
   const now = input.now ?? new Date();
   const payload = await buildBackup(input.db ?? getDb());
-  const compressed = gzipSync(serializeBackup(payload), { level: 9 });
+  const serialized = serializeBackup(payload);
+  assertNoSecrets(serialized, 'file export');
+  const compressed = gzipSync(serialized, { level: 9 });
   const key = backupObjectKey(now);
   const put = input.put ?? putObject;
   await put(key, compressed, 'application/gzip');

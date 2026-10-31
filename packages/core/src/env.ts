@@ -32,6 +32,9 @@ const optionalShape = {
   // Kênh Telegram của watchlist (Giai đoạn 4). Thiếu thì bỏ qua kênh này.
   TELEGRAM_BOT_TOKEN: optionalText(),
   TELEGRAM_CHAT_ID: optionalText(),
+  // Hạn mức dung lượng của gói đang dùng (byte); bỏ trống thì dùng mặc định trong capacity.ts.
+  DB_QUOTA_BYTES: optionalText(),
+  STORAGE_QUOTA_BYTES: optionalText(),
 };
 
 // Object Storage của Neon: `neon link` đẩy credential vào .env.local theo tên chuẩn AWS,

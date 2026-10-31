@@ -14,6 +14,7 @@ export type GuardRoute =
   | 'watchlist'
   | 'search'
   | 'graph'
+  | 'maintenance'
   | 'export';
 
 // Ngưỡng khai một chỗ: đổi ở đây là mọi route theo ngay, không phải sửa từng route.
@@ -27,12 +28,13 @@ export const GUARD_LIMITS: Record<GuardRoute, { limit: number; windowMs: number 
   watchlist: { limit: 30, windowMs: 60_000 },
   search: { limit: 120, windowMs: 60_000 },
   graph: { limit: 60, windowMs: 60_000 },
+  maintenance: { limit: 30, windowMs: 60_000 },
   export: { limit: 30, windowMs: 60_000 },
 };
 
 // Model nhúng được phép gọi: `bge-m3` chạy ở máy (Giai đoạn 0) và `qwen3-embedding` trên Ollama
 // Cloud (Giai đoạn 2). Đổi model là phải sinh lại vector, nên danh sách này đi kèm `embed_model`.
-export const ALLOWED_EMBED_MODELS = ['bge-m3', 'qwen3-embedding'] as const;
+export const ALLOWED_EMBED_MODELS = ['bge-m3', 'qwen3-embedding', '@cf/baai/bge-m3'] as const;
 
 // Model chat được phép gọi ở route `/api/chat`.
 export const ALLOWED_CHAT_MODELS = ['gemma4:31b'] as const;
@@ -76,6 +78,25 @@ export function isChatModelAllowed(model: string): boolean {
 
 export function isSourceKindAllowed(kind: string): boolean {
   return (ALLOWED_SOURCE_KINDS as readonly string[]).includes(kind);
+}
+
+// Rà allowlist so với giá trị đang dùng thật (Giai đoạn 5, T3). Trả tên lệch, không trả nội dung.
+export function guardAuditIssues(input: {
+  chatModels?: readonly string[];
+  embedModels?: readonly string[];
+  sourceKinds?: readonly string[];
+}): string[] {
+  const issues: string[] = [];
+  for (const model of input.chatModels ?? []) {
+    if (!isChatModelAllowed(model)) issues.push(`chat_model_not_allowed:${model}`);
+  }
+  for (const model of input.embedModels ?? []) {
+    if (!isModelAllowed(model)) issues.push(`embed_model_not_allowed:${model}`);
+  }
+  for (const kind of input.sourceKinds ?? []) {
+    if (!isSourceKindAllowed(kind)) issues.push(`source_kind_not_allowed:${kind}`);
+  }
+  return issues;
 }
 
 function refuse(reason: RefusalReason, retryAfterSeconds?: number): GuardRefusal {

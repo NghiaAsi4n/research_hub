@@ -3,8 +3,10 @@ import {
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
   DeleteObjectCommand,
+  GetBucketPolicyStatusCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   ListPartsCommand,
   PutObjectCommand,
   S3Client,
@@ -321,6 +323,53 @@ export async function getObjectBytes(key: string): Promise<Uint8Array> {
 // Xoá object: dùng để dọn file kiểm chứng và, về sau, dọn bản ghi hỏng.
 export function deleteObject(key: string) {
   return client().send(new DeleteObjectCommand({ Bucket: bucketName(), Key: key }));
+}
+
+// Tổng dung lượng đang dùng: cộng `Size` của mọi object, phân trang theo 1.000 khoá.
+export async function objectStorageUsage(): Promise<number> {
+  let total = 0;
+  let token: string | undefined;
+  do {
+    const page = await client().send(
+      new ListObjectsV2Command({
+        Bucket: bucketName(),
+        ContinuationToken: token,
+        MaxKeys: 1000,
+      }),
+    );
+    for (const object of page.Contents ?? []) {
+      total += object.Size ?? 0;
+    }
+    token = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (token !== undefined);
+  return total;
+}
+
+// `null` khi backend không trả trạng thái policy (một số S3-compatible không hỗ trợ).
+export async function bucketPolicyIsPublic(): Promise<boolean | null> {
+  try {
+    const result = await client().send(new GetBucketPolicyStatusCommand({ Bucket: bucketName() }));
+    return result.PolicyStatus?.IsPublic ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Gọi thẳng endpoint không ký: bucket kín phải trả 401/403 thay vì 200.
+export async function anonymousBucketListBlocked(
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean | null> {
+  const env = getEnv();
+  if (!env.AWS_ENDPOINT_URL_S3) return null;
+  try {
+    const response = await fetchImpl(
+      `${env.AWS_ENDPOINT_URL_S3.replace(/\/+$/, '')}/${bucketName()}?list-type=2`,
+      { signal: AbortSignal.timeout(10_000) },
+    );
+    return response.status === 401 || response.status === 403 || response.status === 404;
+  } catch {
+    return null;
+  }
 }
 
 // Quy ước khoá: <kind>/<yyyy>/<mm>/<uuid>.<ext> cho file gốc,

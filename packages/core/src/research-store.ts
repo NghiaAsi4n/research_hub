@@ -5,6 +5,7 @@ import { runSteps, runs } from './db/schema';
 import type { ResearchDeps, ResearchState, ResearchTurnResult, ResearchUsage } from './research';
 import { initResearch, runResearchTurn } from './research';
 import { renderResearchReport } from './research-report';
+import { assertNoSecrets } from './secrets';
 
 export const DEFAULT_RESEARCH_SESSION_MS = 60 * 60 * 1000;
 export const DEFAULT_RESEARCH_LEASE_MS = 300_000;
@@ -247,6 +248,8 @@ export async function persistResearchStep(input: {
   db?: Db;
   now?: Date;
 }): Promise<PersistResearchStepResult> {
+  // Không ghi bước nào chứa khoá bí mật vào `run_steps`/`runs.plan` (Giai đoạn 5, T4).
+  assertNoSecrets(JSON.stringify(input.state), 'run_steps');
   const db = input.db ?? getDb();
   const now = input.now ?? new Date();
   const idemKey = `research:${input.runId}:step:${input.previous.steps}`;
@@ -350,6 +353,7 @@ export async function beginResearchStep(input: {
   db?: Db;
   now?: Date;
 }): Promise<BeginResearchStepResult> {
+  assertNoSecrets(JSON.stringify(input.state), 'run_steps');
   const db = input.db ?? getDb();
   const now = input.now ?? new Date();
   const idemKey = `research:${input.runId}:step:${input.state.steps}`;

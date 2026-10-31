@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+import { CHAT_MODEL } from './chat';
+import { CLOUDFLARE_EMBED_MODEL, DEFAULT_EMBED_MODEL } from './embed';
 import {
   ALLOWED_EMBED_MODELS,
   ALLOWED_SOURCE_KINDS,
   GUARD_LIMITS,
+  guardAuditIssues,
   guardQuotaRoute,
   isModelAllowed,
   isSourceKindAllowed,
@@ -111,7 +114,7 @@ describe('guardQuotaRoute', () => {
 
 describe('allowlist', () => {
   it('chỉ cho model nhúng đã pull ở Giai đoạn 0', () => {
-    expect(ALLOWED_EMBED_MODELS).toEqual(['bge-m3', 'qwen3-embedding']);
+    expect(ALLOWED_EMBED_MODELS).toEqual(['bge-m3', 'qwen3-embedding', '@cf/baai/bge-m3']);
     expect(isModelAllowed('bge-m3')).toBe(true);
     expect(isModelAllowed('qwen3-embedding')).toBe(true);
     expect(isModelAllowed('gemma4:31b')).toBe(false);
@@ -121,6 +124,19 @@ describe('allowlist', () => {
     expect(ALLOWED_SOURCE_KINDS).toEqual(['documents', 'media']);
     expect(isSourceKindAllowed('media')).toBe(true);
     expect(isSourceKindAllowed('tmp')).toBe(false);
+  });
+
+  it('không lệch giữa model/nguồn đang dùng và allowlist', () => {
+    expect(
+      guardAuditIssues({
+        chatModels: [CHAT_MODEL],
+        embedModels: [DEFAULT_EMBED_MODEL, CLOUDFLARE_EMBED_MODEL, 'bge-m3'],
+        sourceKinds: ['documents', 'media'],
+      }),
+    ).toEqual([]);
+    expect(guardAuditIssues({ chatModels: ['model-lạ'] })).toEqual([
+      'chat_model_not_allowed:model-lạ',
+    ]);
   });
 });
 
@@ -136,6 +152,7 @@ describe('cấu hình dùng chung', () => {
       watchlist: { limit: 30, windowMs: 60_000 },
       search: { limit: 120, windowMs: 60_000 },
       graph: { limit: 60, windowMs: 60_000 },
+      maintenance: { limit: 30, windowMs: 60_000 },
       export: { limit: 30, windowMs: 60_000 },
     });
   });

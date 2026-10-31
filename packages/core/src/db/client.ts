@@ -8,7 +8,12 @@ import * as schema from './schema';
 let cached: ReturnType<typeof createDb> | null = null;
 
 function createDb() {
-  const sql = neon(getEnv().DATABASE_URL);
+  return createDbAt(getEnv().DATABASE_URL);
+}
+
+// Kết nối tới một database khác (ví dụ branch đích của diễn tập khôi phục) mà không đổi cache.
+export function createDbAt(databaseUrl: string) {
+  const sql = neon(databaseUrl);
   return drizzle(sql, { schema });
 }
 
@@ -19,5 +24,5 @@ export function getDb() {
   return cached;
 }
 
-export type Db = ReturnType<typeof getDb>;
+export type Db = ReturnType<typeof createDbAt>;
 export { schema };

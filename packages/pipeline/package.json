@@ -13,7 +13,8 @@
     "test": "vitest run --passWithNoTests",
     "local": "node src/local.ts",
     "backup:export": "tsx src/backup/export.ts",
-    "backup:restore": "tsx src/backup/restore.ts"
+    "backup:restore": "tsx src/backup/restore.ts",
+    "backup:drill": "tsx src/backup/drill.ts"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
