@@ -110,15 +110,15 @@ describe('chat boundary', () => {
     expect(text).toContain('"citations":[]');
   });
 
-  it('reports an upstream failure as an error event instead of hanging', async () => {
+  it('reports an upstream failure as a retryable response instead of hanging', async () => {
     const stream = vi.fn(async () => {
       throw new Error('ollama_unreachable');
     });
     const response = await createChatHandler({ search: async () => [hit('a')], stream })(
       request({ question: 'hỏi' }),
-    ).catch((error: unknown) => error as Error);
+    );
 
-    expect(response).toBeInstanceOf(Error);
-    expect((response as Error).message).toContain('ollama_unreachable');
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({ error: 'model_unavailable' });
   });
 });

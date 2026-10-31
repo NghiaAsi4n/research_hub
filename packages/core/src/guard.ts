@@ -4,7 +4,7 @@
 // Phần quyết định nằm ở core để test được mà không cần Next.js; việc đếm hạn mức và ghi log do
 // lớp gọi truyền vào (xem `apps/web/src/lib/guard.ts`).
 
-export type GuardRoute = 'embed' | 'ingest' | 'reader' | 'chat';
+export type GuardRoute = 'embed' | 'ingest' | 'reader' | 'chat' | 'research';
 
 // Ngưỡng khai một chỗ: đổi ở đây là mọi route theo ngay, không phải sửa từng route.
 export const GUARD_LIMITS: Record<GuardRoute, { limit: number; windowMs: number }> = {
@@ -12,6 +12,7 @@ export const GUARD_LIMITS: Record<GuardRoute, { limit: number; windowMs: number 
   ingest: { limit: 30, windowMs: 60_000 },
   reader: { limit: 120, windowMs: 60_000 },
   chat: { limit: 20, windowMs: 60_000 },
+  research: { limit: 6, windowMs: 60_000 },
 };
 
 // Model nhúng được phép gọi: `bge-m3` chạy ở máy (Giai đoạn 0) và `qwen3-embedding` trên Ollama

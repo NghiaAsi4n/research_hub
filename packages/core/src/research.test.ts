@@ -1,5 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
-import { initResearch, type ResearchDeps, runResearch, runResearchStep } from './research';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  initResearch,
+  type ResearchDeps,
+  runResearch,
+  runResearchStep,
+  runResearchTurn,
+} from './research';
 
 function deps(overrides: Partial<ResearchDeps> = {}): ResearchDeps {
   return {
@@ -32,6 +38,30 @@ describe('runResearchStep', () => {
 
     expect(seen).toEqual(['plan', 'search', 'read', 'read', 'read', 'reflect', 'synthesize']);
     expect(state.report).toContain('3 nguồn');
+  });
+
+  it('keeps a resumable cursor at the next step and position after every transition', async () => {
+    const d = deps();
+    let state = initResearch('Thủ tục thuê nhà');
+    const cursors = [state.cursor];
+
+    for (let index = 0; index < 20; index += 1) {
+      const result = await runResearchStep(state, d);
+      state = result.state;
+      cursors.push(state.cursor);
+      if (result.done) break;
+    }
+
+    expect(cursors).toEqual([
+      { step: 'plan', position: 0 },
+      { step: 'search', position: 0 },
+      { step: 'read', position: 0 },
+      { step: 'read', position: 1 },
+      { step: 'read', position: 2 },
+      { step: 'reflect', position: 0 },
+      { step: 'synthesize', position: 0 },
+      { step: 'synthesize', position: 1 },
+    ]);
   });
 
   it('lập kế hoạch và tìm kiếm chỉ một lần cho mỗi bước', async () => {
@@ -88,5 +118,90 @@ describe('runResearch', () => {
 
     expect(state.report).toBeNull();
     expect(state.steps).toBe(2);
+  });
+});
+
+describe('runResearchTurn', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('limits each invocation but resumes over later turns without a turn-count cap', async () => {
+    const d = deps();
+    let state = initResearch('hỏi');
+    let turns = 0;
+    let result: Awaited<ReturnType<typeof runResearchTurn>> | undefined;
+
+    while (!result?.done && turns < 80) {
+      result = await runResearchTurn(state, d, { maxStepsPerTurn: 1 });
+      state = result.state;
+      turns += 1;
+    }
+
+    expect(result?.done).toBe(true);
+    expect(turns).toBeGreaterThan(5);
+    expect(state.report).toContain('3 nguồn');
+  });
+
+  it('returns resumable work when a step reaches the 240-second turn limit', async () => {
+    vi.useFakeTimers();
+    const state = initResearch('hỏi');
+    let receivedSignal: AbortSignal | undefined;
+    const d = deps({
+      plan: vi.fn((_question: string, signal?: AbortSignal) => {
+        receivedSignal = signal;
+        return new Promise<string[]>(() => {});
+      }),
+    });
+
+    const pending = runResearchTurn(state, d, { turnBudgetMs: 240_000 });
+    await vi.advanceTimersByTimeAsync(240_000);
+    const result = await pending;
+
+    expect(result).toMatchObject({ done: false, hasMore: true, stopReason: 'turn_budget' });
+    expect(result.state).toEqual(state);
+    expect(receivedSignal?.aborted).toBe(true);
+  });
+
+  it('turns a timed-out provider call into resumable work instead of a failed run', async () => {
+    const state = initResearch('hỏi');
+    const d = deps({
+      plan: async () => {
+        const error = new Error('provider timeout');
+        error.name = 'TimeoutError';
+        throw error;
+      },
+    });
+
+    const result = await runResearchTurn(state, d);
+
+    expect(result).toMatchObject({ done: false, hasMore: true, stopReason: 'turn_budget' });
+    expect(result.state).toEqual(state);
+  });
+
+  it('stops when the declared session budget expires', async () => {
+    const result = await runResearchTurn(initResearch('hỏi'), deps(), {
+      sessionExpiresAt: 100,
+      now: () => 100,
+    });
+
+    expect(result).toMatchObject({
+      done: false,
+      hasMore: false,
+      stopReason: 'session_budget',
+    });
+    expect(result.state.steps).toBe(0);
+  });
+
+  it('persists every completed step before advancing to the next one', async () => {
+    const persisted: string[] = [];
+    const d = deps();
+
+    await runResearchTurn(initResearch('hỏi'), d, {
+      maxStepsPerTurn: 2,
+      persist: async ({ state }) => {
+        persisted.push(state.step);
+      },
+    });
+
+    expect(persisted).toEqual(['search', 'read']);
   });
 });

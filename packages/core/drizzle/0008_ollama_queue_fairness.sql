@@ -1,0 +1,1 @@
+ALTER TABLE "ollama_slots" ADD COLUMN "last_lane" text DEFAULT 'research' NOT NULL;

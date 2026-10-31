@@ -4,6 +4,7 @@ import {
   createOllamaEmbedder,
   type Embedder,
 } from '@research-hub/core/embed';
+import { ollamaQueue } from '@research-hub/core/ollama-queue';
 import { ollamaConfig } from './ollama';
 
 // Chọn nhà cung cấp embedding theo biến môi trường (Giai đoạn 2, T2).
@@ -28,5 +29,8 @@ export function createEmbedder(env: NodeJS.ProcessEnv = process.env): EmbedderCh
 
   const { endpoint, apiKey } = ollamaConfig();
   const model = env.EMBED_MODEL?.trim() || 'qwen3-embedding';
-  return { embed: createOllamaEmbedder({ baseUrl: endpoint, apiKey, model }), model };
+  return {
+    embed: createOllamaEmbedder({ baseUrl: endpoint, apiKey, model, queue: ollamaQueue }),
+    model,
+  };
 }

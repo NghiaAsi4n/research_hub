@@ -1,6 +1,14 @@
 import { getTableConfig, type PgTable } from 'drizzle-orm/pg-core';
 import { describe, expect, it } from 'vitest';
-import { documents, jobs, sources } from './schema';
+import {
+  documents,
+  jobs,
+  ollamaQueueRequests,
+  ollamaSlots,
+  runSteps,
+  runs,
+  sources,
+} from './schema';
 
 // Đọc cấu hình bảng từ chính khai báo Drizzle, để test bám theo schema thật thay vì SQL viết tay.
 function indexInfo(table: PgTable) {
@@ -59,5 +67,46 @@ describe('documents', () => {
 describe('sources', () => {
   it('ghi được nguồn dạng URL hoặc file', () => {
     expect(columnNames(sources)).toEqual(expect.arrayContaining(['kind', 'url', 'created_at']));
+  });
+});
+
+describe('research runs', () => {
+  it('has an owner field and the persisted lease, cursor, and budget columns', () => {
+    expect(columnNames(runs)).toEqual(
+      expect.arrayContaining([
+        'owner_id',
+        'cursor',
+        'budget_units',
+        'used_units',
+        'lease_owner',
+        'lease_expires_at',
+        'attempt',
+      ]),
+    );
+  });
+
+  it('uses a unique idempotency key for persisted steps', () => {
+    expect(indexInfo(runSteps)).toContainEqual({
+      name: 'run_steps_idem_key_idx',
+      unique: true,
+      columns: ['idem_key'],
+    });
+  });
+
+  it('has a shared, lease-protected Ollama request slot and ordered queue', () => {
+    expect(indexInfo(ollamaQueueRequests)).toContainEqual({
+      name: 'ollama_queue_requests_status_seq_idx',
+      unique: false,
+      columns: ['status', 'seq'],
+    });
+    expect(columnNames(ollamaSlots)).toEqual(
+      expect.arrayContaining([
+        'slot_name',
+        'request_id',
+        'lease_owner',
+        'lease_expires_at',
+        'last_lane',
+      ]),
+    );
   });
 });

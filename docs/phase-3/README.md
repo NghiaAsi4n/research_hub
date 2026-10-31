@@ -20,11 +20,11 @@
 
 ## Nghiệm thu của giai đoạn (plan mục 9)
 
-- [ ] Một câu hỏi phức tạp cho ra báo cáo từ 5 nguồn trở lên.
-- [ ] Hoàn tất trong ngân sách phiên đã khai báo, không giới hạn số lượt gọi function.
-- [ ] Chạy tiếp đúng chỗ sau khi bị cắt ở giây 300.
-- [ ] Chạm trần ngân sách thì dừng cứng, trả báo cáo một phần kèm lý do.
-- [ ] Không phát sinh chi phí (chỉ dùng hạn mức miễn phí).
+- [ ] Một câu hỏi phức tạp cho ra báo cáo từ 5 nguồn trở lên — đã có test tự động với 6 nguồn; chưa chạy live vì chưa có endpoint model khả dụng.
+- [x] Hoàn tất trong ngân sách phiên đã khai báo, không giới hạn số lượt gọi function.
+- [x] Chạy tiếp đúng chỗ sau khi bị cắt ở giây 300.
+- [x] Chạm trần ngân sách thì dừng cứng, trả báo cáo một phần kèm lý do.
+- [ ] Không phát sinh chi phí (chỉ dùng hạn mức miễn phí) — thiết kế chỉ dùng nhà cung cấp miễn phí hiện có; chưa đo bằng lượt chạy live.
 
 ## Nhánh
 

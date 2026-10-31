@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createOllamaChat } from './chat';
+import { processOllamaQueue } from './ollama-queue';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -17,6 +18,7 @@ describe('createOllamaChat', () => {
       baseUrl: 'https://ollama.com/',
       apiKey: 'secret',
       fetchImpl: fetchImpl as unknown as typeof fetch,
+      queue: processOllamaQueue,
     });
 
     const answer = await chat([{ role: 'user', content: 'hỏi' }]);
@@ -36,6 +38,7 @@ describe('createOllamaChat', () => {
       baseUrl: 'https://ollama.com',
       apiKey: 'k',
       fetchImpl: fetchImpl as unknown as typeof fetch,
+      queue: processOllamaQueue,
     });
 
     await expect(chat([])).rejects.toThrow(/chat_failed: HTTP 401/);
@@ -46,6 +49,7 @@ describe('createOllamaChat', () => {
     const chat = createOllamaChat({
       baseUrl: 'https://ollama.com',
       fetchImpl: fetchImpl as unknown as typeof fetch,
+      queue: processOllamaQueue,
     });
 
     await expect(chat([])).rejects.toThrow(/chat_invalid_response/);

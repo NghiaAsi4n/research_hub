@@ -16,7 +16,10 @@ import { guardRequest } from './guard';
 
 export type ChatDeps = {
   search: (question: string) => Promise<SearchHit[]>;
-  stream: (messages: ChatMessage[]) => Promise<ReadableStream<Uint8Array>>;
+  stream: (
+    messages: ChatMessage[],
+    options?: { signal?: AbortSignal },
+  ) => Promise<ReadableStream<Uint8Array>>;
 };
 
 const encoder = new TextEncoder();
@@ -79,7 +82,16 @@ export function createChatHandler(deps: ChatDeps) {
     const hits = await deps.search(question);
     if (hits.length === 0) return refusalResponse();
 
-    const upstream = await deps.stream(buildChatMessages(question, hits));
+    let upstream: ReadableStream<Uint8Array>;
+    try {
+      upstream = await deps.stream(buildChatMessages(question, hits), { signal: request.signal });
+    } catch (error) {
+      const timedOut = (error as Error).name === 'TimeoutError';
+      return Response.json(
+        { error: timedOut ? 'model_queue_timeout' : 'model_unavailable' },
+        { status: timedOut ? 503 : 502 },
+      );
+    }
     const body = new ReadableStream<Uint8Array>({
       async start(controller) {
         const reader = upstream.getReader();

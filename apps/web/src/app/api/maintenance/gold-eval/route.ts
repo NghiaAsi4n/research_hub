@@ -4,6 +4,7 @@ import { getDb } from '@research-hub/core/db/client';
 import { getEnv } from '@research-hub/core/env';
 import { type EvalQuestion, evaluateCitations } from '@research-hub/core/eval-citations';
 import { GOLD_QUESTIONS } from '@research-hub/core/gold-questions';
+import { ollamaQueue } from '@research-hub/core/ollama-queue';
 import { createEmbedder } from '@/lib/embedder';
 import { ollamaConfig } from '@/lib/ollama';
 
@@ -29,7 +30,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const { endpoint, apiKey } = ollamaConfig();
   const { embed } = createEmbedder();
-  const chat = createOllamaChat({ baseUrl: endpoint, apiKey });
+  const chat = createOllamaChat({ baseUrl: endpoint, apiKey, queue: ollamaQueue });
 
   try {
     const report = await evaluateCitations({

@@ -1,4 +1,5 @@
 import { contentHash } from './content-hash';
+import { type OllamaQueueClient, type OllamaQueueLane, ollamaQueue } from './ollama-queue';
 
 // Sinh vector nhúng cho chunk (Giai đoạn 2, T2).
 //
@@ -9,7 +10,7 @@ import { contentHash } from './content-hash';
 export const DEFAULT_EMBED_MODEL = 'qwen3-embedding';
 export const DEFAULT_EMBED_BATCH = 16;
 
-export type Embedder = (texts: string[]) => Promise<number[][]>;
+export type Embedder = (texts: string[], options?: { signal?: AbortSignal }) => Promise<number[][]>;
 
 export class EmbedError extends Error {
   readonly status?: number;
@@ -26,43 +27,63 @@ export function createOllamaEmbedder(input: {
   apiKey?: string;
   model?: string;
   fetchImpl?: typeof fetch;
+  lane?: OllamaQueueLane;
+  queue?: OllamaQueueClient;
+  onUsage?: (tokens: number) => void;
 }): Embedder {
   const model = input.model ?? DEFAULT_EMBED_MODEL;
   const endpoint = `${input.baseUrl.replace(/\/+$/, '')}/api/embed`;
   const fetchImpl = input.fetchImpl ?? fetch;
+  const queue = input.queue ?? ollamaQueue;
 
-  return async (texts) => {
+  return async (texts, options = {}) => {
     if (texts.length === 0) return [];
-    const headers: Record<string, string> = { 'content-type': 'application/json' };
-    const apiKey = input.apiKey?.trim();
-    if (apiKey) headers.authorization = `Bearer ${apiKey}`;
+    return queue.run(
+      input.lane ?? 'chat',
+      async (signal) => {
+        const headers: Record<string, string> = { 'content-type': 'application/json' };
+        const apiKey = input.apiKey?.trim();
+        if (apiKey) headers.authorization = `Bearer ${apiKey}`;
 
-    let response: Response;
-    try {
-      response = await fetchImpl(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ model, input: texts }),
-      });
-    } catch (error) {
-      throw new EmbedError(`ollama_unreachable: ${(error as Error).message}`);
-    }
+        let response: Response;
+        try {
+          response = await fetchImpl(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ model, input: texts }),
+            signal,
+          });
+        } catch (error) {
+          if (signal.aborted) throw error;
+          throw new EmbedError(`ollama_unreachable: ${(error as Error).message}`);
+        }
 
-    if (!response.ok) {
-      throw new EmbedError(`embed_failed: HTTP ${response.status}`, response.status);
-    }
+        if (!response.ok) {
+          throw new EmbedError(`embed_failed: HTTP ${response.status}`, response.status);
+        }
 
-    const payload = (await response.json().catch(() => null)) as { embeddings?: unknown } | null;
-    const embeddings = payload?.embeddings;
-    if (!Array.isArray(embeddings) || embeddings.length !== texts.length) {
-      throw new EmbedError('embed_invalid_response');
-    }
-    for (const vector of embeddings) {
-      if (!Array.isArray(vector) || vector.some((value) => typeof value !== 'number')) {
-        throw new EmbedError('embed_invalid_vector');
-      }
-    }
-    return embeddings as number[][];
+        const payload = (await response.json().catch(() => null)) as {
+          embeddings?: unknown;
+          prompt_eval_count?: unknown;
+        } | null;
+        const embeddings = payload?.embeddings;
+        if (!Array.isArray(embeddings) || embeddings.length !== texts.length) {
+          throw new EmbedError('embed_invalid_response');
+        }
+        for (const vector of embeddings) {
+          if (!Array.isArray(vector) || vector.some((value) => typeof value !== 'number')) {
+            throw new EmbedError('embed_invalid_vector');
+          }
+        }
+        const actualTokens =
+          typeof payload?.prompt_eval_count === 'number'
+            ? payload.prompt_eval_count
+            : Math.ceil(texts.reduce((total, text) => total + text.length, 0) / 4);
+        input.onUsage?.(actualTokens);
+        return embeddings as number[][];
+      },
+      { signal: options.signal },
+    );
   };
 }
 
@@ -80,7 +101,7 @@ export function createCloudflareEmbedder(input: {
   const endpoint = `https://api.cloudflare.com/client/v4/accounts/${input.accountId}/ai/run/${model}`;
   const fetchImpl = input.fetchImpl ?? fetch;
 
-  return async (texts) => {
+  return async (texts, options = {}) => {
     if (texts.length === 0) return [];
     let response: Response;
     try {
@@ -91,6 +112,7 @@ export function createCloudflareEmbedder(input: {
           'content-type': 'application/json',
         },
         body: JSON.stringify({ text: texts }),
+        signal: options.signal,
       });
     } catch (error) {
       throw new EmbedError(`cloudflare_unreachable: ${(error as Error).message}`);

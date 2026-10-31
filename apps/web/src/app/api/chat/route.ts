@@ -1,4 +1,5 @@
 import { CHAT_MODEL, type ChatMessage } from '@research-hub/core/chat';
+import { holdOllamaQueueForStream, ollamaQueue } from '@research-hub/core/ollama-queue';
 import { hybridSearch } from '@research-hub/core/search';
 import { createChatHandler } from '@/lib/chat-handler';
 import { createEmbedder } from '@/lib/embedder';
@@ -23,17 +24,32 @@ const handler = createChatHandler({
     return hybridSearch({ query: question, embed, limit: 6 });
   },
 
-  async stream(messages: ChatMessage[]) {
+  async stream(messages: ChatMessage[], options?: { signal?: AbortSignal }) {
     const { endpoint, apiKey } = ollamaConfig();
-    const response = await fetch(`${endpoint}/api/chat`, {
-      method: 'POST',
-      headers: requestHeaders(apiKey),
-      body: JSON.stringify({ model: CHAT_MODEL, messages, stream: true }),
+    const signal = AbortSignal.any([
+      options?.signal ?? new AbortController().signal,
+      AbortSignal.timeout(55_000),
+    ]);
+    const release = await ollamaQueue.acquire('chat', {
+      signal: options?.signal,
+      timeoutMs: 15_000,
     });
-    if (!response.ok || !response.body) {
-      throw new Error(`chat_failed: HTTP ${response.status}`);
+    try {
+      const response = await fetch(`${endpoint}/api/chat`, {
+        method: 'POST',
+        headers: requestHeaders(apiKey),
+        body: JSON.stringify({ model: CHAT_MODEL, messages, stream: true }),
+        signal,
+      });
+      if (!response.ok || !response.body) {
+        release();
+        throw new Error(`chat_failed: HTTP ${response.status}`);
+      }
+      return holdOllamaQueueForStream(response.body, release);
+    } catch (error) {
+      release();
+      throw error;
     }
-    return response.body;
   },
 });
 

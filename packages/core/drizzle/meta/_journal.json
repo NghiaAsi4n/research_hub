@@ -43,6 +43,27 @@
       "when": 1792886400000,
       "tag": "0005_search_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793405522047,
+      "tag": "0006_research_run_owner",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793405926607,
+      "tag": "0007_shared_ollama_queue",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793406426895,
+      "tag": "0008_ollama_queue_fairness",
+      "breakpoints": true
     }
   ]
 }

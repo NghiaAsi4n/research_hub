@@ -131,6 +131,7 @@ describe('cấu hình dùng chung', () => {
       ingest: { limit: 30, windowMs: 60_000 },
       reader: { limit: 120, windowMs: 60_000 },
       chat: { limit: 20, windowMs: 60_000 },
+      research: { limit: 6, windowMs: 60_000 },
     });
   });
 

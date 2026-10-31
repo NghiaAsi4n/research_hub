@@ -1,3 +1,4 @@
+import { type OllamaQueueClient, type OllamaQueueLane, ollamaQueue } from './ollama-queue';
 import type { SearchHit } from './search';
 
 // Chat trả lời có trích dẫn (Giai đoạn 2, T4).
@@ -13,7 +14,10 @@ export const REFUSAL_TEXT = 'Không đủ bằng chứng trong tài liệu để
 export type ChatMessage = { role: 'system' | 'user'; content: string };
 
 /** Trả về câu trả lời trọn vẹn cho một lượt hỏi (không streaming). */
-export type ChatCompleter = (messages: ChatMessage[]) => Promise<string>;
+export type ChatCompleter = (
+  messages: ChatMessage[],
+  options?: { signal?: AbortSignal },
+) => Promise<string>;
 
 // Gọi `/api/chat` của Ollama ở chế độ không streaming: dùng cho đánh giá và lệnh chạy nền.
 export function createOllamaChat(input: {
@@ -21,35 +25,60 @@ export function createOllamaChat(input: {
   apiKey?: string;
   model?: string;
   fetchImpl?: typeof fetch;
+  lane?: OllamaQueueLane;
+  queue?: OllamaQueueClient;
+  timeoutMs?: number;
+  beforeRequest?: () => Promise<void>;
+  onUsage?: (tokens: number) => void | Promise<void>;
 }): ChatCompleter {
   const model = input.model ?? CHAT_MODEL;
   const endpoint = `${input.baseUrl.replace(/\/+$/, '')}/api/chat`;
   const fetchImpl = input.fetchImpl ?? fetch;
+  const queue = input.queue ?? ollamaQueue;
 
-  return async (messages) => {
-    const headers: Record<string, string> = { 'content-type': 'application/json' };
-    const apiKey = input.apiKey?.trim();
-    if (apiKey) headers.authorization = `Bearer ${apiKey}`;
+  return async (messages, options = {}) =>
+    queue.run(
+      input.lane ?? 'research',
+      async (signal) => {
+        const headers: Record<string, string> = { 'content-type': 'application/json' };
+        const apiKey = input.apiKey?.trim();
+        if (apiKey) headers.authorization = `Bearer ${apiKey}`;
+        await input.beforeRequest?.();
 
-    let response: Response;
-    try {
-      response = await fetchImpl(endpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ model, messages, stream: false }),
-      });
-    } catch (error) {
-      throw new Error(`ollama_unreachable: ${(error as Error).message}`);
-    }
+        let response: Response;
+        try {
+          response = await fetchImpl(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ model, messages, stream: false }),
+            signal,
+          });
+        } catch (error) {
+          if (signal.aborted) throw error;
+          throw new Error(`ollama_unreachable: ${(error as Error).message}`);
+        }
 
-    if (!response.ok) throw new Error(`chat_failed: HTTP ${response.status}`);
-    const payload = (await response.json().catch(() => null)) as {
-      message?: { content?: unknown };
-    } | null;
-    const content = payload?.message?.content;
-    if (typeof content !== 'string') throw new Error('chat_invalid_response');
-    return content;
-  };
+        if (!response.ok) throw new Error(`chat_failed: HTTP ${response.status}`);
+        const payload = (await response.json().catch(() => null)) as {
+          message?: { content?: unknown };
+          prompt_eval_count?: unknown;
+          eval_count?: unknown;
+        } | null;
+        const content = payload?.message?.content;
+        if (typeof content !== 'string') throw new Error('chat_invalid_response');
+        const promptTokens =
+          typeof payload?.prompt_eval_count === 'number' ? payload.prompt_eval_count : 0;
+        const outputTokens = typeof payload?.eval_count === 'number' ? payload.eval_count : 0;
+        const estimatedTokens = Math.ceil(
+          (messages.reduce((total, message) => total + message.content.length, 0) +
+            content.length) /
+            4,
+        );
+        await input.onUsage?.(promptTokens + outputTokens || estimatedTokens);
+        return content;
+      },
+      { signal: options.signal, timeoutMs: input.timeoutMs },
+    );
 }
 
 export type Citation = {

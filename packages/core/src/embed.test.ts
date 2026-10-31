@@ -9,6 +9,7 @@ import {
   EmbedError,
   embedInBatches,
 } from './embed';
+import { processOllamaQueue } from './ollama-queue';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -31,6 +32,7 @@ describe('createOllamaEmbedder', () => {
       baseUrl: 'https://ollama.com/',
       apiKey: 'secret',
       fetchImpl: fetchImpl as unknown as typeof fetch,
+      queue: processOllamaQueue,
     });
 
     const vectors = await embed(['một', 'hai']);
@@ -53,6 +55,7 @@ describe('createOllamaEmbedder', () => {
     const embed = createOllamaEmbedder({
       baseUrl: 'http://127.0.0.1:11434',
       fetchImpl: fetchImpl as unknown as typeof fetch,
+      queue: processOllamaQueue,
     });
 
     await embed(['x']);
@@ -67,6 +70,7 @@ describe('createOllamaEmbedder', () => {
       baseUrl: 'https://ollama.com',
       apiKey: 'k',
       fetchImpl: fetchImpl as unknown as typeof fetch,
+      queue: processOllamaQueue,
     });
 
     await expect(embed(['x'])).rejects.toMatchObject({ name: 'EmbedError', status: 401 });
@@ -77,6 +81,7 @@ describe('createOllamaEmbedder', () => {
     const embed = createOllamaEmbedder({
       baseUrl: 'https://ollama.com',
       fetchImpl: fetchImpl as unknown as typeof fetch,
+      queue: processOllamaQueue,
     });
 
     await expect(embed(['a', 'b'])).rejects.toThrow(EmbedError);
@@ -87,6 +92,7 @@ describe('createOllamaEmbedder', () => {
     const embed = createOllamaEmbedder({
       baseUrl: 'https://ollama.com',
       fetchImpl: fetchImpl as unknown as typeof fetch,
+      queue: processOllamaQueue,
     });
 
     await expect(embed(['a'])).rejects.toThrow(/embed_invalid_vector/);
@@ -97,6 +103,7 @@ describe('createOllamaEmbedder', () => {
     const embed = createOllamaEmbedder({
       baseUrl: 'https://ollama.com',
       fetchImpl: fetchImpl as unknown as typeof fetch,
+      queue: processOllamaQueue,
     });
 
     expect(await embed([])).toEqual([]);

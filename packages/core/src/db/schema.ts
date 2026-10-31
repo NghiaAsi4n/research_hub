@@ -1,4 +1,5 @@
 import {
+  bigserial,
   customType,
   index,
   integer,
@@ -189,23 +190,28 @@ export const noteLinks = pgTable(
 
 // --- Phiên research ---
 
-export const runs = pgTable('runs', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  kind: text('kind').notNull(),
-  question: text('question'),
-  // TODO(rà soát plan): chưa liệt kê giá trị. Tạm dùng: queued | running | done | failed | expired.
-  status: text('status').notNull().default('queued'),
-  plan: jsonb('plan'),
-  cursor: jsonb('cursor'),
-  budgetUnits: integer('budget_units'),
-  usedUnits: integer('used_units').notNull().default(0),
-  expiresAt: timestamp('expires_at', { withTimezone: true }),
-  startedAt: timestamp('started_at', { withTimezone: true }),
-  endedAt: timestamp('ended_at', { withTimezone: true }),
-  leaseOwner: text('lease_owner'),
-  leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
-  attempt: integer('attempt').notNull().default(0),
-});
+export const runs = pgTable(
+  'runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    kind: text('kind').notNull(),
+    ownerId: text('owner_id'),
+    question: text('question'),
+    // TODO(rà soát plan): chưa liệt kê giá trị. Tạm dùng: queued | running | done | failed | expired.
+    status: text('status').notNull().default('queued'),
+    plan: jsonb('plan'),
+    cursor: jsonb('cursor'),
+    budgetUnits: integer('budget_units'),
+    usedUnits: integer('used_units').notNull().default(0),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    leaseOwner: text('lease_owner'),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+    attempt: integer('attempt').notNull().default(0),
+  },
+  (table) => [index('runs_owner_started_idx').on(table.ownerId, table.startedAt)],
+);
 
 export const runSteps = pgTable(
   'run_steps',
@@ -228,6 +234,31 @@ export const runSteps = pgTable(
   },
   (table) => [uniqueIndex('run_steps_idem_key_idx').on(table.idemKey)],
 );
+
+export const ollamaQueueRequests = pgTable(
+  'ollama_queue_requests',
+  {
+    seq: bigserial('seq', { mode: 'number' }).primaryKey(),
+    id: uuid('id').notNull(),
+    lane: text('lane').notNull(),
+    status: text('status').notNull().default('waiting'),
+    deadlineAt: timestamp('deadline_at', { withTimezone: true }).notNull(),
+    leaseOwner: text('lease_owner'),
+    leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex('ollama_queue_requests_id_idx').on(table.id),
+    index('ollama_queue_requests_status_seq_idx').on(table.status, table.seq),
+  ],
+);
+
+export const ollamaSlots = pgTable('ollama_slots', {
+  slotName: text('slot_name').primaryKey(),
+  requestId: uuid('request_id'),
+  leaseOwner: text('lease_owner'),
+  leaseExpiresAt: timestamp('lease_expires_at', { withTimezone: true }),
+  lastLane: text('last_lane').notNull().default('research'),
+});
 
 // --- Trích dẫn ---
 

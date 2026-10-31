@@ -3,6 +3,7 @@ import {
   resolveEmbedDim,
   resolveOllamaBaseUrl,
 } from '@research-hub/core/env';
+import { ollamaQueue } from '@research-hub/core/ollama-queue';
 import { guardRequest } from '@/lib/guard';
 
 // Model nhúng chạy ở máy, đã pull ở Giai đoạn 0. Giá trị này phải được ghi vào
@@ -37,26 +38,47 @@ export async function POST(request: Request) {
     headers.authorization = `Bearer ${apiKey}`;
   }
 
-  let response: Response;
+  let outcome: { status: number; actualDim?: number };
   try {
-    response = await fetch(`${endpoint}/api/embed`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ model: EMBED_MODEL, input }),
-    });
-  } catch {
+    outcome = await ollamaQueue.run(
+      'chat',
+      async (signal) => {
+        let response: Response;
+        try {
+          response = await fetch(`${endpoint}/api/embed`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ model: EMBED_MODEL, input }),
+            signal,
+          });
+        } catch {
+          return { status: 0 };
+        }
+        if (!response.ok) return { status: response.status };
+        const payload = (await response.json()) as { embeddings?: number[][] };
+        return { status: response.status, actualDim: payload.embeddings?.[0]?.length ?? 0 };
+      },
+      { signal: request.signal, timeoutMs: 30_000 },
+    );
+  } catch (error) {
+    if ((error as Error).name === 'TimeoutError') {
+      return Response.json({ error: 'model_queue_timeout' }, { status: 503 });
+    }
+    return Response.json({ error: 'ollama_unreachable' }, { status: 502 });
+  }
+
+  if (outcome.status === 0) {
     return Response.json({ error: 'ollama_unreachable', endpoint }, { status: 502 });
   }
 
-  if (!response.ok) {
+  if (outcome.status < 200 || outcome.status >= 300) {
     return Response.json(
-      { error: 'embed_failed', endpoint, upstreamStatus: response.status },
+      { error: 'embed_failed', endpoint, upstreamStatus: outcome.status },
       { status: 502 },
     );
   }
 
-  const payload = (await response.json()) as { embeddings?: number[][] };
-  const actualDim = payload.embeddings?.[0]?.length ?? 0;
+  const actualDim = outcome.actualDim ?? 0;
 
   return Response.json({
     endpoint,
