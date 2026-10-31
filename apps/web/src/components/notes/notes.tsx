@@ -251,6 +251,12 @@ export function Notes() {
                     </a>
                   ))}
             </p>
+            <p>
+              Chỉ-đọc: <a href={`/read/note/${selected.id}`}>bản đọc</a> · Tải về:{' '}
+              <a href={`/api/export/note/${selected.id}?format=md`}>Markdown</a>{' '}
+              <a href={`/api/export/note/${selected.id}?format=pdf`}>PDF</a>{' '}
+              <a href={`/api/export/note/${selected.id}?format=docx`}>DOCX</a>
+            </p>
           </section>
         </>
       ) : null}

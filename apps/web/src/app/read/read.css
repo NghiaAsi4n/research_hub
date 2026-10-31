@@ -1,0 +1,21 @@
+.read-only article {
+  max-width: 46rem;
+}
+
+.read-only blockquote {
+  border-left: 3px solid var(--muted);
+  margin-left: 0;
+  padding-left: 1rem;
+  color: var(--muted);
+}
+
+@media print {
+  .no-print {
+    display: none;
+  }
+
+  body {
+    max-width: none;
+    padding: 0;
+  }
+}
