@@ -54,4 +54,22 @@ describe('createOllamaChat', () => {
 
     await expect(chat([])).rejects.toThrow(/chat_invalid_response/);
   });
+
+  it('passes JSON mode and deterministic temperature to the provider', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ message: { content: '{"notes":[]}' } }));
+    const chat = createOllamaChat({
+      baseUrl: 'https://ollama.com',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      queue: processOllamaQueue,
+      temperature: 0,
+    });
+
+    await chat([{ role: 'user', content: 'hỏi' }], { format: 'json' });
+
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      format: 'json',
+      options: { temperature: 0 },
+    });
+  });
 });

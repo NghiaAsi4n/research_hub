@@ -20,11 +20,18 @@
 
 ## Nghiệm thu của giai đoạn (plan mục 9)
 
-- [ ] Một câu hỏi phức tạp cho ra báo cáo từ 5 nguồn trở lên — đã có test tự động với 6 nguồn; chưa chạy live vì chưa có endpoint model khả dụng.
+- [x] Một câu hỏi phức tạp cho ra báo cáo từ 5 nguồn trở lên — chạy live với Ollama cục bộ `qwen2.5:3b`: 8 nguồn, 6 nguồn có nội dung, báo cáo đủ kết luận/bằng chứng/nguồn.
 - [x] Hoàn tất trong ngân sách phiên đã khai báo, không giới hạn số lượt gọi function.
 - [x] Chạy tiếp đúng chỗ sau khi bị cắt ở giây 300.
 - [x] Chạm trần ngân sách thì dừng cứng, trả báo cáo một phần kèm lý do.
-- [ ] Không phát sinh chi phí (chỉ dùng hạn mức miễn phí) — thiết kế chỉ dùng nhà cung cấp miễn phí hiện có; chưa đo bằng lượt chạy live.
+- [x] Không phát sinh chi phí (chỉ dùng hạn mức miễn phí) — lượt live dùng Ollama cục bộ và tìm kiếm web công khai, không thêm nhà cung cấp trả phí.
+
+## Bằng chứng nghiệm thu live
+
+- Câu hỏi: thủ tục và điều kiện thành lập doanh nghiệp tư nhân tại Việt Nam.
+- Kết quả: `done` sau 12 bước, 8 nguồn, 6 nguồn có trích đoạn; 13.247 token và 12 đơn vị, thấp hơn ngưỡng cảnh báo.
+- Báo cáo Markdown có đủ `## Kết luận`, `## Bằng chứng`, `## Nguồn`; không rơi vào câu từ chối.
+- Dữ liệu run thử đã xoá khỏi Neon staging sau khi đo.
 
 ## Nhánh
 

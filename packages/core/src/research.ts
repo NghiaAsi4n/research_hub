@@ -137,15 +137,26 @@ export async function runResearchStep(
       found.push(...(await deps.search(query, signal)));
     }
     const sources = [...state.sources, ...addSources(state, found)];
+    const remaining = state.pendingQueries.slice(batch.length);
     const hasUnread = sources.some((source) => !source.read);
+    const nextStep = hasUnread
+      ? 'read'
+      : remaining.length > 0
+        ? 'search'
+        : sources.length === 0
+          ? 'synthesize'
+          : 'reflect';
     return {
       state: {
         ...state,
         steps,
         sources,
-        pendingQueries: state.pendingQueries.slice(batch.length),
-        step: hasUnread ? 'read' : 'reflect',
-        cursor: { step: hasUnread ? 'read' : 'reflect', position: 0 },
+        pendingQueries: remaining,
+        step: nextStep,
+        cursor:
+          nextStep === 'search'
+            ? { step: 'search', position: state.cursor.position + batch.length }
+            : { step: nextStep, position: 0 },
       },
       done: false,
     };
@@ -160,21 +171,28 @@ export async function runResearchStep(
       };
     }
     const target = state.sources[index] as ResearchSource;
-    const { excerpt } = await deps.read(target, signal);
+    let excerpt = '';
+    try {
+      excerpt = (await deps.read(target, signal)).excerpt;
+    } catch (error) {
+      if (signal?.aborted) throw error;
+    }
     const sources = state.sources.map((source, position) =>
       position === index ? { ...source, read: true, excerpt } : source,
     );
     const stillUnread = sources.some((source) => !source.read);
+    const nextStep = stillUnread ? 'read' : state.pendingQueries.length > 0 ? 'search' : 'reflect';
     // Mỗi lượt chỉ đọc một nguồn để không vượt trần thời gian của function.
     return {
       state: {
         ...state,
         steps,
         sources,
-        step: stillUnread ? 'read' : 'reflect',
-        cursor: stillUnread
-          ? { step: 'read', position: state.cursor.position + 1 }
-          : { step: 'reflect', position: 0 },
+        step: nextStep,
+        cursor:
+          nextStep === 'read'
+            ? { step: 'read', position: state.cursor.position + 1 }
+            : { step: nextStep, position: 0 },
       },
       done: false,
     };

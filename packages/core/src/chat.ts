@@ -16,7 +16,7 @@ export type ChatMessage = { role: 'system' | 'user'; content: string };
 /** Trả về câu trả lời trọn vẹn cho một lượt hỏi (không streaming). */
 export type ChatCompleter = (
   messages: ChatMessage[],
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; format?: 'json' },
 ) => Promise<string>;
 
 // Gọi `/api/chat` của Ollama ở chế độ không streaming: dùng cho đánh giá và lệnh chạy nền.
@@ -28,6 +28,7 @@ export function createOllamaChat(input: {
   lane?: OllamaQueueLane;
   queue?: OllamaQueueClient;
   timeoutMs?: number;
+  temperature?: number;
   beforeRequest?: () => Promise<void>;
   onUsage?: (tokens: number) => void | Promise<void>;
 }): ChatCompleter {
@@ -50,7 +51,15 @@ export function createOllamaChat(input: {
           response = await fetchImpl(endpoint, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ model, messages, stream: false }),
+            body: JSON.stringify({
+              model,
+              messages,
+              stream: false,
+              ...(options.format ? { format: options.format } : {}),
+              ...(input.temperature !== undefined
+                ? { options: { temperature: input.temperature } }
+                : {}),
+            }),
             signal,
           });
         } catch (error) {

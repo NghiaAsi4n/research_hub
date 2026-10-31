@@ -64,6 +64,75 @@ describe('runResearchStep', () => {
     ]);
   });
 
+  it('skips a source that cannot be read and continues with the remaining sources', async () => {
+    const d = deps({
+      plan: async () => ['query'],
+      search: async () => [
+        { url: 'https://example.com/blocked', title: 'Bị chặn' },
+        { url: 'https://example.com/ok-1', title: 'Đọc được 1' },
+        { url: 'https://example.com/ok-2', title: 'Đọc được 2' },
+      ],
+      read: vi.fn(async (source) => {
+        if (source.url.endsWith('/blocked')) throw new Error('HTTP 403');
+        return { excerpt: `Trích đoạn ${source.title}` };
+      }),
+    });
+    let state = initResearch('hỏi');
+
+    for (let index = 0; index < 20; index += 1) {
+      const result = await runResearchStep(state, d);
+      state = result.state;
+      if (result.done) break;
+    }
+
+    expect(state.sources.map((source) => ({ read: source.read, excerpt: source.excerpt }))).toEqual(
+      [
+        { read: true, excerpt: '' },
+        { read: true, excerpt: 'Trích đoạn Đọc được 1' },
+        { read: true, excerpt: 'Trích đoạn Đọc được 2' },
+      ],
+    );
+    expect(d.reflect).toHaveBeenCalledTimes(1);
+  });
+
+  it('finishes with a refusal report when every search returns no sources', async () => {
+    const d = deps({
+      plan: async () => ['q1', 'q2'],
+      search: async () => [],
+    });
+    const seen: string[] = [];
+    let state = initResearch('hỏi');
+
+    for (let index = 0; index < 10; index += 1) {
+      seen.push(state.step);
+      const result = await runResearchStep(state, d);
+      state = result.state;
+      if (result.done) break;
+    }
+
+    expect(seen).toEqual(['plan', 'search', 'synthesize']);
+    expect(d.reflect).not.toHaveBeenCalled();
+  });
+
+  it('continues through pending search queries before reflecting', async () => {
+    const d = deps({
+      plan: async () => ['q1', 'q2', 'q3'],
+      search: async (query) =>
+        query === 'q1' ? [{ url: 'https://example.com/one', title: 'Một' }] : [],
+    });
+    const seen: string[] = [];
+    let state = initResearch('hỏi');
+
+    for (let index = 0; index < 10; index += 1) {
+      seen.push(state.step);
+      const result = await runResearchStep(state, d);
+      state = result.state;
+      if (result.done) break;
+    }
+
+    expect(seen).toEqual(['plan', 'search', 'read', 'search', 'reflect', 'synthesize']);
+  });
+
   it('lập kế hoạch và tìm kiếm chỉ một lần cho mỗi bước', async () => {
     const d = deps();
     const first = await runResearchStep(initResearch('hỏi'), d);
