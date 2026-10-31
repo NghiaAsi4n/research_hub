@@ -10,8 +10,10 @@ Cập nhật file này sau mỗi mục checklist đã hoàn tất và kiểm ch�
 - T2/RH-38 đã xong (commit `dcd5806`): watchlist store, cron so diff, chuông trong app + Telegram (tuỳ chọn), trang `/watchlist`. Live với trang luật trên luatvietnam.vn phát hiện thay đổi và ghi `changes` + thông báo.
 - T3/RH-39 đã xong (commit `b395368`): export 19 bảng nghiệp vụ (bỏ settings, quotes, bảng hàng đợi, vector nhúng), gzip lên `backups/<ngày>.json.gz`, cron `/api/cron/backup`, lệnh `backup:export`/`backup:restore`. Đã export staging, tạo branch Neon thử, restore đủ 10 bản ghi mẫu rồi xoá branch và object thử.
 - T4/RH-40 đã xong (commit `fd75d5d`): xuất Markdown/PDF/DOCX từ ghi chú và báo cáo research, route `/api/export/[kind]/[id]`, trang chỉ-đọc `/read/[kind]/[id]`. PDF nhúng Noto Sans; build production đạt.
-- T5/RH-41 đã xong: tìm kiếm toàn cục ba loại, API `/api/search`, trang `/search`; đồ thị quan hệ tài liệu, API `/api/graph`, trang `/graph`. Live trên staging trả đủ 3 loại kết quả và đồ thị 3 nút/2 cạnh.
+- T5/RH-41 đã xong (commit `0b7c583`): tìm kiếm toàn cục ba loại, API `/api/search`, trang `/search`; đồ thị quan hệ tài liệu, API `/api/graph`, trang `/graph`. Live trên staging trả đủ 3 loại kết quả và đồ thị 3 nút/2 cạnh.
+- Phase 4 hoàn tất: epic RH-36 và RH-37…RH-41 đều `Done`; hai tiêu chí nghiệm thu giai đoạn đã đạt (watchlist phát hiện thay đổi; file export mở lại và khôi phục vào branch mới).
+- Kiểm chứng cuối: core 198 đạt/13 bỏ qua, web 49 đạt/1 bỏ qua, pipeline 33 đạt/4 bỏ qua; typecheck ba workspace sạch; `pnpm build` đạt.
 - Kiểm chứng hiện tại: core 185 đạt/13 bỏ qua, web 49 đạt/1 bỏ qua, typecheck ba workspace sạch, Biome sạch trên file Phase 4.
 - Lưu ý lint: `pnpm lint` toàn repo còn báo lỗi có sẵn ở `apps/web/src/lib/research-deps.ts` (useOptionalChain) và `research-deps.test.ts` (format), không thuộc Phase 4.
-- Bước tiếp theo: không còn ticket Phase 4 đang mở; chờ người dùng xác nhận nghiệm thu giai đoạn.
+- Bước tiếp theo: chuyển sang Giai đoạn 5 (cứng hoá) khi người dùng yêu cầu; chưa tạo ticket Giai đoạn 5.
 - Lưu ý bảo mật: Next.js 16.4.0 báo phiên bản có lỗ hổng đã biết; cân nhắc `next upgrade --agent=security` trong worktree riêng khi người dùng đồng ý.

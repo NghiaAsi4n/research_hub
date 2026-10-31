@@ -19,8 +19,13 @@
 
 ## Nghiệm thu của giai đoạn (plan mục 9)
 
-- [ ] Watchlist phát hiện đúng thay đổi trên một trang văn bản luật trong vòng 24 giờ.
-- [ ] File export mở lại được và khôi phục được vào branch mới.
+- [x] Watchlist phát hiện đúng thay đổi trên một trang văn bản luật trong vòng 24 giờ.
+- [x] File export mở lại được và khôi phục được vào branch mới.
+
+## Bằng chứng nghiệm thu
+
+- Watchlist: cron hằng ngày chạy 01:00 UTC; chạy thật với trang `luatvietnam.vn/doanh-nghiep/luat-doanh-nghiep-2014-852-19301-article.html` trên Neon staging — lần đầu lưu mốc, lượt sau phát hiện thay đổi, ghi `changes` và thông báo `in_app`. Chưa chờ đủ 24 giờ thực; đường phát hiện được kiểm bằng nội dung mô phỏng trên trang thật.
+- Export: `backups/2026-10-31.json.gz` từ staging; tạo branch Neon `phase4-restore-check`, áp migration, restore đủ 10 bản ghi mẫu; branch và object thử đã xoá.
 
 ## Nhánh
 
