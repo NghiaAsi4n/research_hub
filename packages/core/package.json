@@ -33,6 +33,7 @@
     "./research": "./src/research.ts",
     "./research-store": "./src/research-store.ts",
     "./research-report": "./src/research-report.ts",
+    "./note-store": "./src/note-store.ts",
     "./ollama-queue": "./src/ollama-queue.ts",
     "./backfill-hash": "./src/backfill-hash.ts",
     "./reader": "./src/reader.ts",

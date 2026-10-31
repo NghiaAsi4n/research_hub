@@ -5,6 +5,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   real,
   text,
   timestamp,
@@ -172,7 +173,9 @@ export const notes = pgTable('notes', {
   title: text('title').notNull(),
   bodyMd: text('body_md').notNull().default(''),
   docId: uuid('doc_id').references(() => documents.id, { onDelete: 'set null' }),
+  tags: jsonb('tags').$type<string[]>().notNull().default([]),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const noteLinks = pgTable(
@@ -304,9 +307,9 @@ export const notifications = pgTable(
     // in_app | telegram | slack | email
     channel: text('channel').notNull(),
     payloadDigest: text('payload_digest').notNull(),
+    payload: jsonb('payload'),
+    readAt: timestamp('read_at', { withTimezone: true }),
     sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
-    // TODO(rà soát plan): thiếu run_id / watchlist_id nên chưa truy được đã gửi bản tin nào
-    // cho kênh nào. Bổ sung khi chốt thiết kế thông báo.
   },
   (table) => [
     uniqueIndex('notifications_kind_channel_digest_idx').on(
@@ -336,6 +339,21 @@ export const changes = pgTable('changes', {
   diff: jsonb('diff'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Nội dung lần quét gần nhất của từng nguồn trong một mục theo dõi: so hash để biết trang đã đổi.
+export const watchlistSnapshots = pgTable(
+  'watchlist_snapshots',
+  {
+    watchlistId: uuid('watchlist_id')
+      .notNull()
+      .references(() => watchlist.id, { onDelete: 'cascade' }),
+    url: text('url').notNull(),
+    contentHash: text('content_hash').notNull(),
+    text: text('text').notNull(),
+    checkedAt: timestamp('checked_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.watchlistId, table.url] })],
+);
 
 // --- Hàng đợi việc ---
 

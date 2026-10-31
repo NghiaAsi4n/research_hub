@@ -64,6 +64,13 @@
       "when": 1793406426895,
       "tag": "0008_ollama_queue_fairness",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793449316610,
+      "tag": "0009_phase4_notes_watchlist",
+      "breakpoints": true
     }
   ]
 }

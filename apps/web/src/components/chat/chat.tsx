@@ -22,6 +22,8 @@ export function Chat() {
   const [answer, setAnswer] = useState('');
   const [citations, setCitations] = useState<Citation[]>([]);
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [savedNote, setSavedNote] = useState<{ id: string; title: string } | null>(null);
+  const [savingChunk, setSavingChunk] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
 
@@ -34,6 +36,7 @@ export function Chat() {
     setAnswer('');
     setCitations([]);
     setQuote(null);
+    setSavedNote(null);
     setError('');
 
     try {
@@ -100,6 +103,25 @@ export function Chat() {
     }
   };
 
+  const saveCitation = async (citation: Citation) => {
+    setSavingChunk(citation.chunkId);
+    setError('');
+    try {
+      const response = await fetch('/api/notes/citation', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chunkId: citation.chunkId }),
+      });
+      if (!response.ok) throw new Error('Không lưu được vào ghi chú.');
+      const note = (await response.json()) as { id: string; title: string };
+      setSavedNote({ id: note.id, title: note.title });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Không lưu được vào ghi chú.');
+    } finally {
+      setSavingChunk(null);
+    }
+  };
+
   return (
     <main>
       <p>
@@ -134,6 +156,13 @@ export function Chat() {
                 <li key={citation.chunkId}>
                   <button type="button" onClick={() => openCitation(citation)}>
                     [{citation.index}] {citation.documentTitle} — đoạn {citation.ord + 1}
+                  </button>{' '}
+                  <button
+                    type="button"
+                    onClick={() => saveCitation(citation)}
+                    disabled={savingChunk === citation.chunkId}
+                  >
+                    {savingChunk === citation.chunkId ? 'Đang lưu…' : 'Lưu vào ghi chú'}
                   </button>
                 </li>
               ))}
@@ -150,6 +179,12 @@ export function Chat() {
           <p>Đoạn {quote.ord + 1}</p>
           <blockquote>{quote.text}</blockquote>
         </aside>
+      ) : null}
+
+      {savedNote ? (
+        <p role="status">
+          Đã lưu vào ghi chú <a href={`/notes?note=${savedNote.id}`}>{savedNote.title}</a>.
+        </p>
       ) : null}
     </main>
   );
