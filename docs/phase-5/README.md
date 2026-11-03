@@ -25,7 +25,7 @@
 
 - Khôi phục: `backup:drill` chạy trên branch `phase5-drill` mới, tổng 2,971 giây (export 1.407 ms, restore 487 ms, đối chiếu 1.067 ms), không lệch bảng nào; branch thử đã xoá.
 - Bí mật: bộ quét khoá chặn export và `run_steps` trước khi ghi; test xác nhận thông báo lỗi không chứa giá trị khoá, `settings` không nằm trong export, log guard chỉ có route/reason.
-- 2FA: chưa bật được vì Managed Better Auth không có plugin two-factor; xem `t5-storage-va-2fa.md` — đây là phần bị chặn, không tính là đạt.
+- 2FA: người dùng xác nhận đã bật cho tài khoản Neon trong Neon Console ngày 2026-11-03; ghi nhận theo xác nhận, không kiểm tra trực tiếp được. Điều này không bật 2FA cho đăng nhập research-hub; chi tiết trong `t5-storage-va-2fa.md`.
 
 ## Nhánh
 

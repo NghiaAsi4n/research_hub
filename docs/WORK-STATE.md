@@ -14,7 +14,7 @@ Cập nhật file này sau mỗi mục checklist đã hoàn tất và kiểm ch�
 - Phase 4 hoàn tất: epic RH-36 và RH-37…RH-41 đều `Done`; hai tiêu chí nghiệm thu giai đoạn đã đạt (watchlist phát hiện thay đổi; file export mở lại và khôi phục vào branch mới).
 - Kiểm chứng cuối: core 198 đạt/13 bỏ qua, web 49 đạt/1 bỏ qua, pipeline 33 đạt/4 bỏ qua; typecheck ba workspace sạch; `pnpm build` đạt.
 - Lưu ý lint: `pnpm lint` toàn repo còn báo lỗi có sẵn ở `apps/web/src/lib/research-deps.ts` (useOptionalChain) và `research-deps.test.ts` (format), không thuộc Phase 4.
-- Phase 5 làm trên nhánh `phase-5`, epic RH-42 với RH-43…RH-47, checklist trong `docs/phase-5/`. Đã xong mã T1–T4 và phần Object Storage của T5; 2FA bị chặn vì Managed Better Auth không có plugin two-factor (bằng chứng trong `t5-storage-va-2fa.md`).
+- Phase 5 làm trên nhánh `phase-5`, epic RH-42 với RH-43…RH-47, checklist trong `docs/phase-5/`. T1–T5 hoàn tất; người dùng xác nhận đã bật 2FA tài khoản Neon trong Console ngày 2026-11-03 (không kiểm tra trực tiếp được). Jira RH-42 và RH-43…RH-47 đều `Done`.
 - Kiểm chứng Phase 5: capacity thật 9.543.680 byte DB/0 byte storage (1,78% hạn mức), drill khôi phục 2,971 giây trên branch mới, allowlist bổ sung `@cf/baai/bge-m3`, chặn khoá ở export và run_steps, bucket kín (`publicPolicy=false`, chặn đọc ẩn danh).
 - Đã commit và push: Next.js 16.4.1 ở `2325634`, Phase 5 ở `eae5f65`; `origin/phase-5` và `main` đều ở `eae5f65` (đã merge nhanh).
-- Bước tiếp theo: người dùng duyệt commit; phần 2FA chờ quyết định bật 2FA tài khoản Neon trong Console hay chuyển self-managed Better Auth.
+- Bước tiếp theo: Phase 5 đã đóng; chỉ triển khai giai đoạn kế tiếp khi người dùng yêu cầu.
