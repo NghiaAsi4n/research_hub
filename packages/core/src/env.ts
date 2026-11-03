@@ -28,7 +28,15 @@ const optionalText = () =>
 const optionalShape = {
   SLACK_WEBHOOK_URL: optionalText(),
   RESEND_API_KEY: optionalText(),
-  SSI_API_KEY: optionalText(),
+  SSI_CONSUMER_ID: optionalText(),
+  SSI_CONSUMER_SECRET: optionalText(),
+  // Bản tin hằng ngày: danh sách mã/chỉ số, feed RSS, người nhận và người gửi.
+  BRIEFING_SYMBOLS: optionalText(),
+  BRIEFING_RSS_URLS: optionalText(),
+  BRIEFING_EMAIL_TO: optionalText(),
+  BRIEFING_FROM_EMAIL: optionalText(),
+  HN_MIN_SCORE: optionalText(),
+  BRIEFING_MAX_ITEMS: optionalText(),
   // Kênh Telegram của watchlist (Giai đoạn 4). Thiếu thì bỏ qua kênh này.
   TELEGRAM_BOT_TOKEN: optionalText(),
   TELEGRAM_CHAT_ID: optionalText(),

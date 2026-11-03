@@ -17,4 +17,8 @@ Cập nhật file này sau mỗi mục checklist đã hoàn tất và kiểm ch�
 - Phase 5 làm trên nhánh `phase-5`, epic RH-42 với RH-43…RH-47, checklist trong `docs/phase-5/`. T1–T5 hoàn tất; người dùng xác nhận đã bật 2FA tài khoản Neon trong Console ngày 2026-11-03 (không kiểm tra trực tiếp được). Jira RH-42 và RH-43…RH-47 đều `Done`.
 - Kiểm chứng Phase 5: capacity thật 9.543.680 byte DB/0 byte storage (1,78% hạn mức), drill khôi phục 2,971 giây trên branch mới, allowlist bổ sung `@cf/baai/bge-m3`, chặn khoá ở export và run_steps, bucket kín (`publicPolicy=false`, chặn đọc ẩn danh).
 - Đã commit và push: Next.js 16.4.1 ở `2325634`, Phase 5 ở `eae5f65`; `origin/phase-5` và `main` đều ở `eae5f65` (đã merge nhanh).
-- Bước tiếp theo: Phase 5 đã đóng; chỉ triển khai giai đoạn kế tiếp khi người dùng yêu cầu.
+- Phase 6 làm trên nhánh `phase-6`, epic RH-48 với RH-49…RH-53, checklist trong `docs/phase-6/`. Đã xong mã và test T1–T4; job `briefing` nối vào `/api/cron/[job]`.
+- Kiểm chứng Phase 6: core 224 đạt/13 bỏ qua, web 49 đạt/1 bỏ qua, pipeline 33 đạt/4 bỏ qua; typecheck và build sạch. Chạy thật Hacker News thu 10 tin, `marketStatus=skipped_missing_credentials`, kênh Slack/email `skipped`.
+- Phase 6 chưa đạt nghiệm thu đầy đủ vì thiếu `SSI_CONSUMER_ID`/`SSI_CONSUMER_SECRET`, `SLACK_WEBHOOK_URL`, `RESEND_API_KEY`, `BRIEFING_EMAIL_TO`.
+- Người dùng đã duyệt commit và push Phase 6 ngày 2026-11-03; nhánh `phase-6` chưa merge vào `main`.
+- Bước tiếp theo: cấp khoá SSI/Slack/Resend để chạy thử đầu-cuối; quyết định merge `phase-6` sau khi nghiệm thu.

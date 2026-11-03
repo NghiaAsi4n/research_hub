@@ -57,7 +57,7 @@ Project Neon phải tạo ở region **Singapore** (`aws-ap-southeast-1`) ngay t
 |---|---|---|
 | `GET /api/health` | công khai | xác nhận cấu hình đã nạp |
 | `POST /api/embed` | session + rate limit | kiểm tra vector đúng `EMBED_DIM` (mặc định 1024 chiều) |
-| `GET /api/cron/{job}` | `CRON_SECRET` | khung, chưa nối việc |
+| `GET /api/cron/{job}` | `CRON_SECRET` | chạy watchlist, bản tin hằng ngày hoặc sao lưu |
 | `POST /api/ingest` | session + rate limit | phát URL ký sẵn (`presignUpload`) để upload thẳng lên Object Storage |
 | `/api/auth/*` | Managed Better Auth | chặn luồng đăng ký |
 
@@ -70,5 +70,4 @@ Khai báo ở `apps/web/vercel.json` (Root Directory của project Vercel là `a
 | `/api/cron/watchlist` | 01:00 | quét watchlist và chạy reaper của lease |
 | `/api/cron/briefing` | 09:00 | bản tin hằng ngày (Giai đoạn 6) |
 | `/api/cron/backup` | 18:00 | export sao lưu |
-
 

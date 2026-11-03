@@ -1,7 +1,10 @@
+import { runBriefing } from '@research-hub/core/briefing-run';
 import { getEnv } from '@research-hub/core/env';
 import { createWatchlistStore } from '@research-hub/core/watchlist-store';
 import { readHtml } from '@research-hub/pipeline/read-html';
 import { createBackup } from '@/lib/backup-run';
+import { sendBriefingEmail } from '@/lib/resend';
+import { sendSlackText } from '@/lib/slack';
 import { sendTelegramMessage } from '@/lib/telegram';
 import { runWatchlistCheck } from '@/lib/watchlist-run';
 
@@ -49,6 +52,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ job:
     return Response.json({ job, status: 'ok', ...result });
   }
 
-  // Briefing thuộc Giai đoạn 6. Trả 501 để không ai tưởng việc đã chạy.
-  return Response.json({ job, status: 'not_implemented', phase: 6 }, { status: 501 });
+  const summary = await runBriefing({
+    sendSlack: sendSlackText,
+    sendEmail: sendBriefingEmail,
+  });
+  return Response.json({ job, status: 'ok', ...summary });
 }
